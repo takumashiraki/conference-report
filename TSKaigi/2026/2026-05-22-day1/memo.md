@@ -14,11 +14,12 @@
     - 型ガードなしでアサーションするのは危険
       - 型チェックを放棄するような書き方は危険
 - 登壇者目線のプラクティス
-  - **判別可能なユニオンとneverで完全性を検証**
-  - **Mapped TypesによるDRYな書き方**
-  - **ROROパターン**
-  - **narrowingによる型の絞り込み**
-  - **ブランド方で構造体を区別する**
+  - 型の使い方の使い所と使い分けがわからない 🤷‍♂️
+  - **判別可能なユニオンとneverで完全性を検証** 🤷‍♂️
+  - **Mapped TypesによるDRYな書き方** 🤷‍♂️
+  - **ROROパターン** 🤷‍♂️
+  - **narrowingによる型の絞り込み** 🤷‍♂️
+  - **ブランド方で構造体を区別する** 🤷‍♂️
 - 実験
   - 観点
     - 型の拡張でどのような機能追加
@@ -27,7 +28,11 @@
 
 ## [TypeScriptだけでAIエージェントを作る ― フロント・エージェント・インフラのフルスタック実践（福地開）](https://2026.tskaigi.org/talks/20) ☑️
 
-https://t.co/X7zz8QolYg
+- 資料
+  - https://t.co/X7zz8QolYg
+
+TODO: 登壇を見れていないので、資料を見る
+- AI向けには登壇資料をもとに説明をして欲しい 🤷‍♂️
 
 ## [TanStack StartのcreateServerFnで作る、型が通るAPI（Yuki Terashima）](https://2026.tskaigi.org/talks/25) 🔥
 
@@ -37,7 +42,9 @@ serverFnは薄くする
 出力もSchema化する
 
 - 資料
-  - https://t.co/wBVDRhM2iK)
+  - https://t.co/wBVDRhM2iK
+
+- TanStack Start がよくわかってないので、Next.js(useSWR)と比較して教えて欲しい🤷‍♂️
 
 ## [実践TanStack Start: 新規プロダクトを開発して確立した、サーバーとクライアント境界の設計パターン（Shimmy）](https://2026.tskaigi.org/talks/26) 🔥
 
@@ -65,11 +72,15 @@ serverFnは薄くする
 - https://x.com/Yz_Iori
 
 - ルート定義そのものが型を生み出す
+  - ルート定義の型が理解できてない 🤷‍♂️
 
 ## [Zod v4 Codec でスキーマに型変換を埋め込む REST API 設計（Ryutaro Yako）](https://2026.tskaigi.org/talks/31) ☑️
 
 - 資料
   - https://speakerdeck.com/ryutaro_yako/zod-v4-codec-desukimanixing-bian-huan-womai-meip-mu-rest-api-she-ji-number-tskaigi2026
+
+- 登壇を見れていないので、資料を見る
+- AI向けには登壇資料をもとに説明をして欲しい 🤷‍♂️
 
 ## [アンチパターンを避ける型駆動React最適化（Kazuya Serizawa）](https://2026.tskaigi.org/talks/17) ☑️
 
