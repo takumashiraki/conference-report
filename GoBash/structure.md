@@ -24,6 +24,7 @@
 
 ## タイムテーブル（10分）
 
+<!-- 下記は案 -->
 | 時間 | 内容 | ネタ元 |
 | --- | --- | --- |
 | 0:00 | 自己紹介 + OPTiM（**30秒・1枚**。ここで2分使うと本題が8分になる） | - |
@@ -44,6 +45,8 @@
 
 90秒の配分。
 
+<!-- 下記は案 -->
+
 | 秒 | 内容 |
 | --- | --- |
 | 0:30 | `ls` を2つ並べる。**3秒黙る** |
@@ -52,25 +55,41 @@
 | 1:15 | **2プロジェクト共有の絵**（＋npm は別コピー） |
 | 1:40 | 本当の問いを出す |
 
-#### **(a) `ls` を2つ並べる**
+#### 「Hello World !!」をプリントするサーバーで比較
+
+**サーバーのコードを提示する**
+
+どちらも「HTTP サーバー + ルーター」。やっていることは同じ。
+
+- Golang
+  - ./../ex-Go/main.go
+- npm
+  - ./../ex-npm/index.js
+
+#### パッケージが入っているpathを調べる
+
+npmのimageファイル作成
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=680&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=true&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2523%2520%25E3%2582%25AD%25E3%2583%25A3%25E3%2583%2583%25E3%2582%25B7%25E3%2583%25A5%25E3%2581%25A8%25E3%2581%2597%25E3%2581%25A6%25E4%25BF%259D%25E5%25AD%2598%25E3%2581%2595%25E3%2582%258C%25E3%2582%258B%25E3%2583%2587%25E3%2582%25A3%25E3%2583%25AC%25E3%2582%25AF%25E3%2583%2588%25E3%2583%25AA%25E3%2581%25AE%25E3%2583%2591%25E3%2582%25B9%250Ago%2520env%2520GOMODCACHE%250A%252FUsers%252Fopm008296%252Fgo%252Fpkg%252Fmod%250A%250A%2523%2520%25E3%2583%2580%25E3%2582%25A6%25E3%2583%25B3%25E3%2583%25AD%25E3%2583%25BC%25E3%2583%2589%25E3%2581%2597%25E3%2581%259F%25E3%2583%2590%25E3%2583%25BC%25E3%2582%25B8%25E3%2583%25A7%25E3%2583%25B3%25E3%2581%25AE%25E3%2583%2591%25E3%2583%2583%25E3%2582%25B1%25E3%2583%25BC%25E3%2582%25B8%25E3%2581%25AEpath%25E3%2582%2592%25E8%25A1%25A8%25E7%25A4%25BA%250Ago%2520list%2520-m%2520-f%2520%27%257B%257B.Dir%257D%257D%27%2520github.com%252Fgo-chi%252Fchi%252Fv5%250A%252FUsers%252Fopm008296%252Fgo%252Fpkg%252Fmod%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%2540v5.3.2 -->
+
+Golangのimageファイル作成
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=680&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=true&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2523%2520%25E3%2582%25AD%25E3%2583%25A3%25E3%2583%2583%25E3%2582%25B7%25E3%2583%25A5%25E3%2581%25A8%25E3%2581%2597%25E3%2581%25A6%25E4%25BF%259D%25E5%25AD%2598%25E3%2581%2595%25E3%2582%258C%25E3%2582%258B%25E3%2583%2587%25E3%2582%25A3%25E3%2583%25AC%25E3%2582%25AF%25E3%2583%2588%25E3%2583%25AA%25E3%2581%25AE%25E3%2583%2591%25E3%2582%25B9%250Ago%2520env%2520GOMODCACHE%250A%252FUsers%252Fopm008296%252Fgo%252Fpkg%252Fmod%250A%250A%2523%2520chi%25E3%2582%2592%25E5%2585%25A5%25E3%2582%258C%25E3%2581%25A6%25E3%2581%2584%25E3%2582%258Bpath%25E3%2582%2592%25E8%25A1%25A8%25E7%25A4%25BA%250Ago%2520list%2520-m%2520-f%2520%27%257B%257B.Dir%257D%257D%27%2520github.com%252Fgo-chi%252Fchi%252Fv5%250A%252FUsers%252Fopm008296%252Fgo%252Fpkg%252Fmod%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%2540v5.3.2 -->
 
 実測済み（2026-09-23 / node v26.2.0 / express 5.2.1）。採取元は `ex-npm/README.md`。
 
 ```bash
-ls GoBash/ex-Go
-README.md go.mod    go.sum    main.go
+go env GOMODCACHE
+/Users/shiraki_takuma/go/pkg/mod
 
-ls GoBash/ex-npm
-README.md         index.js          node_modules      package-lock.json package.json
+cd GoBash/ex-Go
+go list -m -f '{{.Dir}}' github.com/go-chi/chi/v5
+/Users/opm008296/go/pkg/mod/github.com/go-chi/chi/v5@v5.3.2
+
+cd GoBash/ex-npm
+npm ls express --parseable
+/Users/opm008296/git/github.com-takumashiraki/takumashiraki/conference-report/GoBash/ex-npm/node_modules/express
 ```
 
-どちらも「HTTP サーバー + ルーター」。やっていることは同じ。
-**片方にだけ実体の入るディレクトリがある。**
-
 「chi を import できているのに、リポジトリに実体がない。どこにある？」
-
-※ `node_modules` は **65 ディレクトリ / 601 ファイル / 3.8M**（express 1個指定で 68 パッケージ）。
-**「数万ファイル」とは言わない**。この構成では嘘になる。実測どおりに言う。
 
 ```bash
 ls GoBash/ex-npm/node_modules
@@ -97,47 +116,31 @@ find GoBash/ex-npm/node_modules -type f | wc -l
      601
 ```
 
-※ **`du` の比較はしない**。`ex-Go` は `question.md` とビルド済みバイナリで 8.0M あり、
-`ex-npm`（3.8M）より大きく出る。**この枠で効くのはサイズではなく場所**。
-「リポジトリの中か、外か」だけを言う。
+※ `node_modules` は **65 ディレクトリ / 601 ファイル / 3.8M**（express 1個指定で 68 パッケージ）。
+**「数万ファイル」とは言わない**。この構成では嘘になる。実測どおりに言う。
 
-#### **(b) 即答する**
-
-```bash
-go env GOMODCACHE
-/Users/shiraki_takuma/go/pkg/mod
-```
-
-#### **(c) パスを読み上げて終わらせない ★ここが問いの成立点**
-
-「1個しかない」を、2プロジェクトの絵で見せる。
+#### Goは別のプロジェクトが、同じパッケージを読んでいる
 
 ```text
-  プロジェクトA/  ─┐
-                   ├─→  ~/go/pkg/mod/github.com/go-chi/chi/v5@v5.3.2
-  プロジェクトB/  ─┘        （マシンに1つ・読み取り専用）
+Go
+  プロジェクトA ─┐
+               ├─→  ~/go/pkg/mod/github.com/go-chi/chi/v5@v5.3.2
+  プロジェクトB ─┘     マシンに1つ・読み取り専用
 
-  npm なら:
-  プロジェクトA/node_modules/chi   ←  別々のコピー
-  プロジェクトB/node_modules/chi
+npm
+  プロジェクトA/node_modules/express   ← それぞれ別のコピー
+  プロジェクトB/node_modules/express
 ```
 
-ここで初めて「npm はプロジェクトごとにコピーしている」
-= **他プロジェクトを信用しない構造になっている**ことが見える。
-Go はそれを1個にした。危機感はここで生まれる。
+- npm はプロジェクトごとにパッケージを入れている
+- Go は別のプロジェクトでもパッケージを共有している
 
-#### **(d) 本当の問い**（これを最後まで引っ張る）
+#### パッケージを共有して、困らないのか？
 
-> 他のプロジェクトと同じディレクトリを読んでいる。
-> **なぜ、他のプロジェクトを信用しなくて済むのか？**
-
-※「なぜ事故らないのか」とは言わない。聴衆は**そもそも事故る気がしていない**ので刺さらない。
-「信用」の語彙にしておくと、5（回収の3条件）と 7（オチ）と一直線に繋がる。
-
-※ 会場への問いかけ（「npm と Go で違うところ、最初に思いつくのは？」）は
-**口頭で投げてよいが、挙手は取らない**。40人・19:35・4社トークの2〜4番手で
-反応が薄いと、その空気を背負って本題に入ることになる。
-`ls` を2枚出して3秒黙るほうが、同じ効果を安全に取れる。
+- なぜ同じディレクトリに配置しているのか？
+- 別のプロジェクトが別のバージョン(例: v5.2.0)を使いたくなったら？
+- 別のプロジェクトが中身を書き換えたら？
+- コミッターが v5.3.2 のタグを別のコミットに付け替えたら？
 
 ### 3. 前提: go.mod は「宣言」（2:00-3:00）
 
