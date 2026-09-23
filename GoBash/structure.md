@@ -40,7 +40,7 @@
 
 1枚。所属と一言だけ。会社紹介パートは作らない。
 
-### 2. 問い（0:30-2:00）
+### 2. 問い（0:30-2:00） 「npm と Golang の一番の違いは何だと思いますか？」
 
 90秒の配分。
 
@@ -52,19 +52,16 @@
 | 1:15 | **2プロジェクト共有の絵**（＋npm は別コピー） |
 | 1:40 | 本当の問いを出す |
 
-**(a) `ls` を2つ並べる（ライブでやる価値があるのはここだけ）**
+#### **(a) `ls` を2つ並べる**
 
 実測済み（2026-09-23 / node v26.2.0 / express 5.2.1）。採取元は `ex-npm/README.md`。
 
 ```bash
-ls ex-npm                    ls ex-Go
-```
+ls GoBash/ex-Go
+README.md go.mod    go.sum    main.go
 
-```text
-index.js                     main.go
-node_modules          ←      go.mod
-package-lock.json            go.sum
-package.json
+ls GoBash/ex-npm
+README.md         index.js          node_modules      package-lock.json package.json
 ```
 
 どちらも「HTTP サーバー + ルーター」。やっていることは同じ。
@@ -75,18 +72,43 @@ package.json
 ※ `node_modules` は **65 ディレクトリ / 601 ファイル / 3.8M**（express 1個指定で 68 パッケージ）。
 **「数万ファイル」とは言わない**。この構成では嘘になる。実測どおりに言う。
 
+```bash
+ls GoBash/ex-npm/node_modules
+accepts                 encodeurl               gopd                    ms                      send
+body-parser             es-define-property      has-symbols             negotiator              serve-static
+bytes                   es-errors               hasown                  object-inspect          setprototypeof
+call-bind-apply-helpers es-object-atoms         http-errors             on-finished             side-channel
+call-bound              escape-html             iconv-lite              once                    side-channel-list
+content-disposition     etag                    inherits                parseurl                side-channel-map
+content-type            express                 ipaddr.js               path-to-regexp          side-channel-weakmap
+cookie                  finalhandler            is-promise              proxy-addr              statuses
+cookie-signature        forwarded               math-intrinsics         qs                      toidentifier
+debug                   fresh                   media-typer             range-parser            type-is
+depd                    function-bind           merge-descriptors       raw-body                unpipe
+dunder-proto            get-intrinsic           mime-db                 router                  vary
+ee-first                get-proto               mime-types              safer-buffer            wrappy
+
+# ディレクトリ数
+ls -1 GoBash/ex-npm/node_modules | wc -l
+      65
+
+# ファイル数
+find GoBash/ex-npm/node_modules -type f | wc -l
+     601
+```
+
 ※ **`du` の比較はしない**。`ex-Go` は `question.md` とビルド済みバイナリで 8.0M あり、
 `ex-npm`（3.8M）より大きく出る。**この枠で効くのはサイズではなく場所**。
 「リポジトリの中か、外か」だけを言う。
 
-**(b) 即答する**（ここは引っ張らない。30秒でバレる）
+#### **(b) 即答する**
 
 ```bash
 go env GOMODCACHE
 /Users/shiraki_takuma/go/pkg/mod
 ```
 
-**(c) パスを読み上げて終わらせない ★ここが問いの成立点**
+#### **(c) パスを読み上げて終わらせない ★ここが問いの成立点**
 
 「1個しかない」を、2プロジェクトの絵で見せる。
 
@@ -104,7 +126,7 @@ go env GOMODCACHE
 = **他プロジェクトを信用しない構造になっている**ことが見える。
 Go はそれを1個にした。危機感はここで生まれる。
 
-**(d) 本当の問い**（これを最後まで引っ張る）
+#### **(d) 本当の問い**（これを最後まで引っ張る）
 
 > 他のプロジェクトと同じディレクトリを読んでいる。
 > **なぜ、他のプロジェクトを信用しなくて済むのか？**
