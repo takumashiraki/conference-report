@@ -1,0 +1,13 @@
+{
+  "name": "ex-npm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ex-Go と同じことをする Node 実装（Go Bash vol.3 の ls 比較用）",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

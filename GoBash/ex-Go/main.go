@@ -1,16 +1,19 @@
-package main // これはGoにとって、「このパッケージは実行可能プログラムです。」という意味になります。
+package main
 
 import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	r := chi.NewRouter()
+	r.Get("/", func(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintln(w, "Hello, Go server!")
 	})
 
 	log.Println("server started at http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", r))
 }
