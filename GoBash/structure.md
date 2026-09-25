@@ -154,6 +154,9 @@ npmのimageファイル
 package.json
 <!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fjson&width=320&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%257B%250A%2520%2520%252F%252F%25205.2.1%2520%25E4%25BB%25A5%25E4%25B8%258A%25206.0.0%2520%25E6%259C%25AA%25E6%25BA%2580%25E3%2582%2592%25E4%25BD%25BF%25E3%2581%2586%250A%2520%2520%2522dependencies%2522%253A%2520%257B%250A%2520%2520%2520%2520%2522express%2522%253A%2520%2522%255E5.2.1%2522%250A%2520%2520%257D%250A%257D -->
 
+package-lock.json
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fjson&width=266&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%257B%250A%2520%2520%252F%252F%25205.2.1%2520%25E3%2582%2592%25E5%2585%25A5%25E3%2582%258C%25E3%2581%259F%250A%2520%2520%2522node_modules%252Fexpress%2522%253A%2520%257B%250A%2520%2520%2520%2520%2522version%2522%253A%2520%25225.2.1%2522%252C%250A%2520%2520%257D%252C%250A%2520%2520%252F%252F%2520Node%252018%2520%25E4%25BB%25A5%25E4%25B8%258A%25E3%2582%2592%25E5%25AF%25BE%25E8%25B1%25A1%25E3%2581%25A8%25E3%2581%2599%25E3%2582%258B%250A%2520%2520%2522engines%2522%253A%2520%257B%250A%2520%2520%2520%2520%2522node%2522%253A%2520%2522%253E%253D%252018%2522%250A%2520%2520%257D%252C%2520%2520%250A%257D -->
+
 公式仕様がそう書いている（[go.dev/ref/mod](https://go.dev/ref/mod#go-mod-file)）。
 
 ```text
@@ -208,13 +211,15 @@ require github.com/go-chi/chi/v5 v5.3.2   ← 何を、どの版から要るか
 
 #### go.sum は lock ファイルか？
 
-**(a) 生まれる瞬間**
+**(a) go getする**
 
 ```bash
-go get github.com/go-chi/chi/v5
-```
+$ go get github.com/go-chi/chi/v5
+go: downloading github.com/go-chi/chi/v5 v5.3.2
+go: downloading github.com/go-chi/chi v1.5.5
+go: added github.com/go-chi/chi/v5 v5.3.2
 
-```text
+$ cat go.sum
 github.com/go-chi/chi/v5 v5.3.2 h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
 github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto=
 ```
