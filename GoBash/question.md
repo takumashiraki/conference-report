@@ -493,13 +493,76 @@ github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutV
 
 **(a) import path からモジュール候補を切り出す**
 
-`github.com/go-chi/chi/v5` という import path を見ても、go コマンドは「どこまでがモジュール名で、どこからがパッケージのサブディレクトリか」を知りません。なので接頭辞を長い順に総当たりします。
+`github.com/go-chi/chi/v5` という import path を見ても、go コマンドは「どこまでがモジュール名で、どこからがパッケージのサブディレクトリか」を知りません。
+
+```go
+import (
+	"fmt"
+	"log"
+	"net/http"
+
+	"github.com/go-chi/chi/v5" // import path
+)
+```
+
+そこで go コマンドは、次の 2 段階でモジュールを決めます（[Resolving a package to a module](https://go.dev/ref/mod#resolve-pkg-mod)）。
+
+| 段階 | 照合する相手 | ネットワーク |
+| --- | --- | --- |
+| (a-1) ビルドリスト照合 | 手元のビルドリスト | 使わない |
+| (a-2) プロキシ問い合わせ | `GOPROXY` | 使う。(a-1) で見つからず、`go get` / `go mod tidy` のときだけ |
+
+**(a-1) ビルドリスト照合**
+
+ビルドリストは、`go.mod` から決まる「ビルドに使うモジュールとバージョンの一覧」です（決め方は (b) の MVS）。`go list -m all` で確認できます。
+
+```bash
+go list -m all
+github.com/takumashiraki/conference-report/GoBash/ex-Go # ← メインモジュール（バージョンなし）
+github.com/go-chi/chi/v5 v5.3.2                          # ← 依存モジュール（モジュールパス バージョン）
+```
+
+go コマンドはまず、ビルドリストの中から、モジュールパス（左列）が import path の接頭辞になっているモジュールを探します。
+完全一致も接頭辞に含まれ、接頭辞からはみ出た部分はモジュール内のサブディレクトリになります。
+
+※ `GOPROXY=off` でネットワークを切っても、ビルドリストだけで解決できました。
+
+```bash
+GOPROXY=off go list -f '{{.ImportPath}} → {{.Module.Path}} {{.Module.Version}}' \
+  github.com/go-chi/chi/v5 github.com/go-chi/chi/v5/middleware
+github.com/go-chi/chi/v5 → github.com/go-chi/chi/v5 v5.3.2
+github.com/go-chi/chi/v5/middleware → github.com/go-chi/chi/v5 v5.3.2
+```
+
+`go.mod` に `require` があれば、この段階でモジュールが決まります。後続のプロキシには問い合わせません。
+
+**(a-2) プロキシ問い合わせ**
+
+ビルドリストで見つからない場合、`go get` と `go mod tidy` は新しいモジュールを探しに行きます。
+最初の `go get` の時点では `go.mod` に `require` がなく、ビルドリストにはメインモジュールしかないので、こちらに進みます。
+
+import path を末尾から 1 要素ずつ削った接頭辞それぞれを、パッケージを提供しうるモジュールパスの候補にします。`GOPROXY` の各エントリに対して、候補ごとに最新バージョンを要求します。公式リファレンスの例では、これらの要求は 1 つのプロキシに対して並列に送られます。
 
 ```txt
-github.com/go-chi/chi/v5   ← これがモジュール？
-github.com/go-chi/chi      ← モジュールで、中に v5/ パッケージがある？
-github.com/go-chi          ← ?
+github.com/go-chi/chi/v5   の最新バージョン
+github.com/go-chi/chi      の最新バージョン
+github.com/go-chi          の最新バージョン
+github.com                 の最新バージョン
 ```
+
+モジュールキャッシュが空の状態で `go get -x` を実行すると、go コマンドが実際にプロキシへ送った要求が見えます。最新バージョンを知るために叩いているのは `@v/list`（バージョン一覧）で、バージョンが返ってくる（要求に成功する）のは 2 つでした。
+
+```bash
+go get -x github.com/go-chi/chi/v5 2>&1 | grep '/@v/list: '
+# get https://proxy.golang.org/github.com/@v/list: 404 Not Found
+# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/list: 200 OK
+# get https://proxy.golang.org/github.com/go-chi/@v/list: 404 Not Found
+# get https://proxy.golang.org/github.com/go-chi/chi/@v/list: 200 OK
+```
+
+（行末の所要時間は省略しています。4 つの要求は並列に送られるので、並び順は実行するたびに変わります。）
+
+要求に成功したモジュールパスについては、最新バージョンのモジュールを取得し、要求されたパッケージを含むかどうかを確認します。パッケージを含むモジュールが複数あれば、パスが最も長いモジュールを使います。
 
 これが、先ほどのログに出てきた謎の 1 行の正体です。
 
@@ -510,6 +573,8 @@ go: downloading github.com/go-chi/chi v1.5.5   ← これ
 
 `github.com/go-chi/chi` の中に `v5` というパッケージディレクトリがあるかもしれないので、確認のために取得しています。実際、キャッシュには両方残っています。
 
+`chi chi@v1.5.5` の `chi` は、chi v1 のことではありません。中を見ると `v5@v5.3.2/` が入っていました。つまり `chi/` は `chi/v5@v5.3.2` の親ディレクトリです。「両方残っています」という記述は正しいです。ただ、`chi` と `chi@v1.5.5` が v1 系の 2 つに見えて誤読されやすくなっています。
+
 ```sh
 ls $(go env GOMODCACHE)/github.com/go-chi/
 chi   chi@v1.5.5
@@ -517,20 +582,52 @@ chi   chi@v1.5.5
 
 **(b) MVS（Minimal Version Selection）**
 
-候補が確定したら、モジュールグラフを構築してバージョンを決めます。「各モジュールについて、要求された中で**最大**のバージョンを選ぶ」だけのアルゴリズムです。npm のような SAT ソルバ的な解決はしません。
+- 候補が確定したら、モジュールグラフをたどってバージョンを決めます。
+- MVS はメインモジュールからグラフをたどり、各モジュールについて要求された中で**最も高い**バージョンを記録します。
+- たどり終えた時点で記録されている最も高いバージョンの集合がビルドリストになります。これが、すべての要求を満たす最小のバージョンです。
+- 「最も高い」と「最小」は矛盾しません。たとえば A が chi v5.0.0 以上、B が v5.2.0 以上を要求していれば、両方を満たす最小のバージョンは v5.2.0 です。それより新しいバージョンが公開されていても、誰も要求していなければ選びません。
 
-ここで大事なのは、グラフの構築には**依存モジュールの `go.mod` だけあればよい**ということです。ソース全体は要りません。だから後述の proxy プロトコルは `.mod` と `.zip` を別エンドポイントに分けていて、`go.sum` にも 2 行載る構造になっています。
+> （[Minimal version selection (MVS)](https://go.dev/ref/mod#minimal-version-selection)）
 
-### ステップ2: GOPROXY または VCS から取得する
+MVS を行うために、go コマンドは依存モジュールの複数のバージョンの `go.mod` を読み込むことがあります。プロキシから取得するときは `go.mod` をモジュールの残りの内容とは別に取得します。そのため後述の proxy プロトコルでは `.mod` と `.zip` が別エンドポイントになっていて、`go.sum` にも `/go.mod` 付きの行（`go.mod` だけのハッシュ）と付かない行（`.zip` の中身のハッシュ）の 2 行が載ります（[go.sum files](https://go.dev/ref/mod#go-sum-files)）。
+
+### ステップ2: モジュールプロキシまたは VCS から取得する
 
 デフォルトの設定はこうなっています。
 
 ```sh
 go env GOPROXY
 https://proxy.golang.org,direct
+
+# https://proxy.golang.org モジュールのキャッシュサーバー
+# , フォールバックのチェーン (「1 番目で取れなければ 2 番目を試す」という順番付きの候補リスト)
+# direct は「プロキシ(https://proxy.golang.org)を使わず直接 VCS(Git) を叩く」という特殊な値で、プロキシが 404 / 410 を返したら次に進みます。
 ```
 
-カンマ区切りはフォールバックのチェーンです。`direct` は「プロキシを使わず直接 VCS を叩く」という特殊な値で、プロキシが 404 / 410 を返したら次に進みます。
+|場面|経路|例|
+|---|---|---|
+|公開モジュール（GitHub の OSS など）|**プロキシ経由**|`github.com/go-chi/chi/v5`|
+|プライベートモジュール（社内リポジトリ）|**direct**|このマシンでは `gitlab.tokyo.optim.co.jp/*`|
+|公開モジュールだが、ミラーが配信を拒否した場合|direct（フォールバック）|公式ヘルプによると、主に法的な理由のとき|
+
+つまり取得経路は 2 通りあります。違いは「`git` を誰が実行するか」です。
+
+```txt
+【プロキシ経由（普段）】
+ go コマンド ──HTTP GET──▶ proxy.golang.org ──git──▶ github.com/go-chi/chi
+                            （git の実行と zip 化はプロキシが代行する）
+
+【direct】
+ go コマンド ──git ls-remote / git fetch──▶ github.com/go-chi/chi
+             （手元の PC が git を実行し、zip も自分で組み立てる）
+```
+
+#### プロキシ経由の場合
+
+ここでいうプロキシは `proxy.golang.org` のことです。Go チームが運営し Google がホストしている、公開モジュールのミラー（キャッシュサーバー）です。
+GitHub などから取ってきたソースを zip にして保存しておき、go コマンドに HTTP で配ります。社内ネットワークの HTTP プロキシ（`HTTP_PROXY`）とは別物です。
+
+作者がアップロードする npm registry とは違い、初めて要求されたバージョンはプロキシ自身が元リポジトリから取ってきます。いったんキャッシュされると、作者が元リポジトリでリリースを消しても取得でき続けます（[proxy.golang.org](https://proxy.golang.org/) の FAQ）。
 
 プロキシへのリクエストは、この 5 種類の HTTP GET だけです。
 
@@ -538,11 +635,43 @@ https://proxy.golang.org,direct
 GET /<module>/@v/list              バージョン一覧
 GET /<module>/@v/<version>.info    メタデータ (JSON)
 GET /<module>/@v/<version>.mod     そのバージョンの go.mod
-GET /<module>/@v/<version>.zip     ソース本体
-GET /<module>/@latest              最新版の解決
+GET /<module>/@v/<version>.zip     ソースアーカイブ (zip)
+GET /<module>/@latest              最新版の解決（タグ付きバージョンが無いときだけ使う）
 ```
 
-バージョン無指定の `go get` だと `@latest` → `.info` → `.mod` → `.zip` の順に叩かれます。
+バージョン無指定の `go get` だと、まず `@v/list` でバージョン一覧を取り、その中で最も高いリリースについて `.info` → `.mod` → `.zip` の順に叩きます。`.mod` と `.zip` の間には `sum.golang.org` へのチェックサム照合が挟まります。
+
+空のモジュール・空のキャッシュで実行し、`chi/v5` の取得に関わる行だけを残して URL を縮めた出力です。
+
+```txt
+❯ cd "$(mktemp -d)" && go mod init demo
+❯ GOMODCACHE=$(mktemp -d) GOFLAGS=-modcacherw go get -x github.com/go-chi/chi/v5 2>&1
+
+# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/list 200 OK        ← ① バージョン一覧
+# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/v5.3.2.info 200 OK ← ② 最も高いリリースのメタデータ
+# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/v5.3.2.mod 200 OK  ← ③ go.mod
+# get https://sum.golang.org/lookup/github.com/go-chi/chi/v5@v5.3.2 200 OK    ← ④ チェックサム照合
+go: downloading github.com/go-chi/chi/v5 v5.3.2
+# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/v5.3.2.zip              200 OK  ← ⑤ ソースアーカイブ
+go: added github.com/go-chi/chi/v5 v5.3.2
+```
+
+① の一覧の末尾はこうなっていて、最も高い `v5.3.2` が選ばれます。
+
+```txt
+❯ curl -s https://proxy.golang.org/github.com/go-chi/chi/v5/@v/list | sort -V | tail -3
+v5.3.0
+v5.3.1
+v5.3.2
+```
+
+実際の出力には、ほかに次の行も混ざります（上では省きました）。
+
+- 親パス（`github.com/go-chi/chi`、`github.com/go-chi`、`github.com`）の `@v/list`。`chi/v5` が短いパスのモジュールの中の `v5/` ディレクトリではないかを確かめるため、並列に問い合わせます。`github.com/go-chi/chi` だけが 200 を返し、その最新版 `v1.5.5` の `.mod` / `.info` / `.zip` も取得します
+- `sum.golang.org/tile/...`。チェックサム照合で、ログの木の一部を取りに行く行です
+- リクエスト開始の行（`# get <URL>`）と所要時間
+
+`@latest` は一度も叩かれていません。go コマンドのソース（`cmd/go/internal/modload/query.go`）を読むと、一覧にリリースもプレリリースも無いときにだけ `@latest` を呼んでいます。タグを一度も打っていないリポジトリを `go get` したときがこれにあたり、プロキシが最新コミットから疑似バージョンを作って返します。
 
 `.info` には取得元の証跡が残っています。
 
@@ -556,9 +685,57 @@ cat $(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.info
  "Hash":"38939062c5df4d3e8814aad1a488983112627ced","Ref":"refs/tags/v5.3.2"}}
 ```
 
-プロキシ自身が「git の `refs/tags/v5.3.2`、コミット `3893906` から作った zip だ」と申告しているわけです。`direct` の場合はここを go コマンド自身がやります（`git ls-remote` でタグ一覧を取り、該当コミットを取得して zip を自前で組み立てる）。
+プロキシ自身が「git の `refs/tags/v5.3.2`、コミット `3893906` から作った zip だ」と申告しているわけです。
 
-社内モジュールをプロキシに漏らしたくない場合の制御はこのあたりです。
+#### direct の場合
+
+VCS は Version Control System の略で、Git や Mercurial などのバージョン管理システムのことです。`direct` は、プロキシを通さずに go コマンドが VCS を直接実行して取得する経路です。上の `.info` にある「git でタグを引き、コミットを取り出して zip にする」作業を、手元の PC で go コマンド自身が行います。公開サーバーに対して使う VCS は、既定で `git` と `hg` だけです（`go help vcs`）。
+
+direct になるのは次の 3 つのときです。
+
+- `GOPROXY` で前にあるプロキシが 404 / 410 を返したとき。500 やタイムアウトでは次へ進まず、そこで止まります。区切りを `,` ではなく `|` にすると、どのエラーでも次へ進みます（`cmd/go/internal/modfetch/proxy.go` の `fallBackOnError`）
+- `GOPROXY=direct` と明示したとき
+- モジュールパスが `GOPRIVATE`（または `GONOPROXY`）に一致するとき。社内リポジトリなどが該当します（`go help private`）
+
+1 つ目のフォールバックは、何を要求しても 404 を返すプロキシを立てると観察できます。
+
+```bash
+# 空ディレクトリを配信するだけのサーバー = 何を要求しても 404 を返すプロキシ
+mkdir -p /tmp/empty && python3 -m http.server 18080 --directory /tmp/empty &
+
+# 普段のキャッシュを汚さないよう、使い捨ての GOMODCACHE に取得する
+GOMODCACHE=/tmp/modcache GOFLAGS=-modcacherw GOPROXY=http://localhost:18080,direct \
+  go mod download -x github.com/go-chi/chi/v5@v5.3.2 2>&1 | grep -E '^# get .*: |^cd .*git (ls-remote|.*fetch)'
+```
+
+```txt
+# get http://localhost:18080/github.com/go-chi/chi/v5/@v/v5.3.2.info: 404 File not found
+cd …/cache/vcs/672f73a6…; git ls-remote -q --end-of-options https://github.com/go-chi/chi
+cd …/cache/vcs/672f73a6…; git -c protocol.version=2 fetch -f --depth=1 --end-of-options origin refs/tags/v5.3.2:refs/tags/v5.3.2
+# get http://localhost:18080/github.com/go-chi/chi/v5/@v/v5.3.2.mod: 404 File not found
+# get http://localhost:18080/sumdb/sum.golang.org/supported: 404 File not found
+# get https://sum.golang.org/lookup/github.com/go-chi/chi/v5@v5.3.2: 200 OK
+# get http://localhost:18080/github.com/go-chi/chi/v5/@v/v5.3.2.zip: 404 File not found
+```
+
+（パスと行末の所要時間、`sum.golang.org/tile/...` の行は省略しています。）
+
+上から順に読むとこうなります。
+
+1. プロキシに `.info` を要求して 404 が返る
+2. 次の候補 `direct` に進み、`git ls-remote` でタグ一覧を取り、`git fetch --depth=1` で `v5.3.2` のタグだけを取得する
+3. `.mod` と `.zip` も毎回まずプロキシに要求し、404 なので、取得済みの git リポジトリから取り出す
+4. checksum database への問い合わせも同じ順で進む。プロキシの `/sumdb/sum.golang.org/supported` が 404 なので、`sum.golang.org` へ直接問い合わせる
+
+経路は違っても、取得結果は同じです。`.info` の `Origin` は、プロキシ経由のときとまったく同じ内容でした。go コマンドが自前で組み立てた zip の `.ziphash` も、`go.sum` と同じ `h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=` です。ステップ4 で見るとおり、H1 は zip のバイト列ではなくファイル名と中身から計算するので、誰が zip を作っても一致します。違いは、direct だと `$GOMODCACHE/cache/vcs/` に git のベアリポジトリが残ることです。
+
+`direct` を外して `GOPROXY=http://localhost:18080` だけにすると、次の候補がないので 404 のまま失敗します。
+
+```txt
+go: github.com/go-chi/chi/v5@v5.3.2: reading http://localhost:18080/github.com/go-chi/chi/v5/@v/v5.3.2.info: 404 File not found
+```
+
+社内モジュールをプロキシに漏らしたくない場合（3 つ目の入口）の制御はこのあたりです。
 
 ```sh
 GOPRIVATE   GONOPROXY   GONOSUMDB   GOVCS
@@ -566,25 +743,106 @@ GOPRIVATE   GONOPROXY   GONOSUMDB   GOVCS
 
 ### ステップ3: モジュールキャッシュに保存する
 
-保存先は `GOMODCACHE` で、キャッシュは 2 層構造になっています。
-
-```txt
-$GOMODCACHE/cache/download/...   ← ダウンロードした生データ（zip のまま）
-$GOMODCACHE/<module>@<version>/  ← 展開済みツリー（ビルドが読む）
-```
-
-生データ側を覗くとこうなっています。
+保存先は `GOMODCACHE`（既定は `~/go/pkg/mod`）です。
 
 ```sh
+go env GOMODCACHE
+/Users/opm008296/go/pkg/mod
+```
+
+この直下に、役割の違う 2 つの置き場が同じ階層で並んでいます。
+
+```txt
+~/go/pkg/mod/
+├── cache/                          ← 層1: 取得したものをそのまま置く
+│   ├── download/
+│   │   ├── github.com/go-chi/chi/v5/@v/
+│   │   │   ├── list                ←   手元にあるバージョンの一覧
+│   │   │   ├── v5.3.2.info         ←   バージョンと取得元（git のコミット）
+│   │   │   ├── v5.3.2.mod          ←   go.mod 単体
+│   │   │   ├── v5.3.2.zip          ←   ソースアーカイブ（ソース一式の zip）
+│   │   │   ├── v5.3.2.ziphash      ←   zip のハッシュ（go.sum と同じ値）
+│   │   │   └── v5.3.2.lock
+│   │   └── sumdb/                  ←   チェックサム DB の応答（ステップ5）
+│   └── vcs/                        ←   direct 取得時の git リポジトリ（ステップ2）
+│
+└── github.com/go-chi/chi/          ← 層2: zip を展開したソース（ビルドが読む）
+    ├── v5@v5.2.5/
+    ├── v5@v5.3.1/
+    └── v5@v5.3.2/                  ←   chi.go, mux.go, go.mod, middleware/ ...
+```
+
+`go get` 1 回で、両方が次の順にできます。
+
+```txt
+1. プロキシ（または git）から .info / .mod / .zip を取得し、層1に保存する
+2. zip のハッシュを計算して go.sum と照合し、.ziphash に記録する
+3. zip を層2に展開し、読み取り専用にする
+4. 以降の go build / go test は層2のソースだけを読む（zip は開かない）
+```
+
+#### 1 コマンドで両方の層を見る
+
+`go mod download -json` を使うと、1 つのモジュールが両方の層のどこに置かれているかがまとめて出力されます。
+
+```sh
+go mod download -json github.com/go-chi/chi/v5@v5.3.2
+{
+	"Path": "github.com/go-chi/chi/v5",
+	"Version": "v5.3.2",
+	"Info": "/Users/opm008296/go/pkg/mod/cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.info",
+	"GoMod": "/Users/opm008296/go/pkg/mod/cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.mod",
+	"Zip": "/Users/opm008296/go/pkg/mod/cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.zip",
+	"Dir": "/Users/opm008296/go/pkg/mod/github.com/go-chi/chi/v5@v5.3.2",
+	"Sum": "h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=",
+	...
+}
+```
+
+`Info` / `GoMod` / `Zip` が層1、`Dir` が層2 です。`Sum` は `go.sum` に書かれる値で、層1の `.ziphash` の中身と同じです。
+
+#### 層1: `cache/download`（生データ）
+
+外側から順に `ls` していくと、層1の中身が見えます。
+
+```sh
+ls $(go env GOMODCACHE)/cache
+download  lock  vcs
+
 ls $(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v/
-list  v5.3.2.info  v5.3.2.lock  v5.3.2.mod  v5.3.2.zip  v5.3.2.ziphash
+list          v5.2.5.zip      v5.3.1.mod      v5.3.2.lock
+v5.2.5.info   v5.2.5.ziphash  v5.3.1.zip      v5.3.2.mod
+v5.2.5.lock   v5.3.1.info     v5.3.1.ziphash  v5.3.2.zip
+v5.2.5.mod    v5.3.1.lock     v5.3.2.info     v5.3.2.ziphash
+```
+
+1 バージョンにつき `.info` / `.lock` / `.mod` / `.zip` / `.ziphash` の 5 ファイルがあり、手元にあるバージョンの数だけ並びます。中身はテキストなので `cat` で読めます。
+
+```sh
+cd $(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v/
+
+cat list
+v5.2.5
+v5.3.1
+v5.3.2
+
+cat v5.3.2.info
+{"Version":"v5.3.2","Time":"2026-08-20T09:37:52Z","Origin":{"VCS":"git","URL":"https://github.com/go-chi/chi","Hash":"38939062c5df4d3e8814aad1a488983112627ced","Ref":"refs/tags/v5.3.2"}}
+
+cat v5.3.2.mod
+module github.com/go-chi/chi/v5
+...
+go 1.23
+
+cat v5.3.2.ziphash
+h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
 ```
 
 | ファイル | 役割 |
 |---|---|
 | `.info` | バージョンと取得元のメタデータ |
 | `.mod` | そのバージョンの `go.mod` 単体 |
-| `.zip` | ソース本体 |
+| `.zip` | ソースアーカイブ。そのバージョンのソース一式を 1 つにまとめた zip |
 | `.ziphash` | 検証済みハッシュのキャッシュ（ステップ5で効く） |
 | `.lock` | 並行する `go` プロセス同士の排他用（0 バイト） |
 
@@ -598,7 +856,60 @@ github.com/!burnt!sushi/   ← github.com/BurntSushi/
 
 もうひとつは**メジャーバージョンサフィックス**です。`/v5` はモジュールパスの一部なので、ディレクトリ階層にそのまま現れます（`chi/v5/@v/`）。
 
-展開済みツリー側は**読み取り専用**で作られます。
+層1のディレクトリ構成は、モジュールプロキシの URL 構成（ステップ2 の `-x` 出力に出た `.../@v/v5.3.2.info` など）とそのまま同じです。そのため、層1はそのままプロキシとして使えます。
+
+```sh
+# 空のキャッシュに、層1だけをプロキシにして取得する（ネットワークに出ない）
+P=$(go env GOMODCACHE)/cache/download
+GOMODCACHE=$(mktemp -d) GOFLAGS=-modcacherw GOSUMDB=off GOPROXY=file://$P \
+  go mod download -json github.com/go-chi/chi/v5@v5.3.2
+# → "Sum": "h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=" で取得できる
+```
+
+#### 層2: `<module>@<version>`（展開済みソース）
+
+層2は、バージョンごとに別のディレクトリになっています。
+
+```sh
+ls $(go env GOMODCACHE)/github.com/go-chi/chi/
+v5@v5.2.5  v5@v5.3.1  v5@v5.3.2
+```
+
+中を見ると、chi のリポジトリのソースがそのまま並んでいます。`go build` が読むのはここです。
+
+```sh
+ls $(go env GOMODCACHE)/github.com/go-chi/chi/v5@v5.3.2
+CHANGELOG.md      chain.go          mux_test.go
+CONTRIBUTING.md   chi.go            path_value_test.go
+LICENSE           context.go        pattern_test.go
+Makefile          context_test.go   testdata
+README.md         go.mod            tree.go
+SECURITY.md       middleware        tree_test.go
+_examples         mux.go
+```
+
+層2の中身は、層1の zip を展開したものです。zip の中のパスが層2のパスと一致すること、`.mod` と展開後の `go.mod` が同じファイルであることで確かめられます。
+
+```sh
+unzip -l $(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.zip | head -4
+Archive:  .../cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+      723  00-00-1980 00:00   github.com/go-chi/chi/v5@v5.3.2/.github/FUNDING.yml
+
+diff $(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.mod \
+     $(go env GOMODCACHE)/github.com/go-chi/chi/v5@v5.3.2/go.mod && echo same
+same
+```
+
+| | 層1（`cache/download`） | 層2（`<module>@<version>`） |
+|---|---|---|
+| 置いてあるもの | `.info` `.mod` `.zip` `.ziphash` | 展開済みのソース |
+| 使う処理 | `go get` / `go mod download` / 検証 / プロキシ配信 | `go build` / `go test` |
+| 大きさ（chi v5.3.2） | zip 132K | 588K・86 ファイル |
+| 権限 | 通常 | 読み取り専用 |
+
+層2は**読み取り専用**で作られます。
 
 ```sh
 ls -ld $(go env GOMODCACHE)/github.com/go-chi/chi/v5@v5.3.2
@@ -609,33 +920,181 @@ dr-xr-xr-x@ 24 ... github.com/go-chi/chi/v5@v5.3.2
 
 ### ステップ4: 暗号学的ハッシュを計算する
 
-`h1:` の `1` はアルゴリズムのバージョン番号です。中身で大事なのは、**zip のバイト列の SHA-256 ではない**という点です。
+`h1:` は、SHA-256 を使うハッシュ方式「Hash1」の識別子です。`golang.org/x/mod/sumdb/dirhash` のソースにも `Hash1 is the "h1:" directory hash function, using SHA-256.` とあります。値の先頭に方式名を書いておくことで、将来別の方式が増えても接頭辞で区別できます。
+
+ハッシュをかける対象は**ソースアーカイブ**です。ソースアーカイブとは、ステップ3 で層1に保存した `v5.3.2.zip` のことで、そのバージョンのソース一式（chi v5.3.2 なら 86 ファイル）を 1 つにまとめた zip ファイルです。
+
+中身で大事なのは、**zip のバイト列の SHA-256 ではない**という点です。手順は次の 4 段です。
 
 ```txt
-1. アーカイブ内の全ファイルについて sha256 を計算する
+1. ソースアーカイブ内の全ファイルについて sha256 を計算する
 2. "<sha256 の hex>  <ファイル名>\n" という行を作る（スペースは 2 個）
 3. ファイル名でソートして全行を連結する → これが「リスト」
-4. そのリスト全体の sha256 を取り、base64 して "h1:" を付ける
+4. そのリスト全体の sha256 を取り、その 32 バイトを base64 して "h1:" を付ける
 ```
+
+#### 手順どおりに計算してみる
+
+chi v5.3.2 のソースアーカイブを使い、4 段を 1 つずつシェルで再現します。
+
+**1. ソースアーカイブ内の全ファイルについて sha256 を計算する**
+
+```sh
+cd $(mktemp -d)
+unzip -q $(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.zip
+find github.com -type f | wc -l
+      86
+# ファイル数 86 個
+
+shasum -a 256 github.com/go-chi/chi/v5@v5.3.2/.gitignore
+785f18e2ac99c66b81d8d185aa1a65cfe4f39b12bef24c1f8037d85840490929  github.com/go-chi/chi/v5@v5.3.2/.gitignore
+# ↑ これが "<sha256 の hex>  <ファイル名>\n" という行になる
+```
+
+ファイル名は zip 内のフルパスで、`github.com/go-chi/chi/v5@v5.3.2/` から始まります。展開先で `github.com` から相対パスを取れば、そのまま同じ名前になります。
+
+**2〜3. 行を作り、ファイル名でソートして連結する**
+
+`shasum` の出力形式は `<sha256 の hex>  <ファイル名>`（スペース 2 個）で、手順2 の行の形式と同じです。そのため、ソートしたファイル名の順に `shasum` を並べるだけでリストができます。
+
+```sh
+find github.com -type f | LC_ALL=C sort \
+  | while read f; do shasum -a 256 "$f"; done > list.txt
+
+wc -l < list.txt; wc -c < list.txt
+      86
+   10452
+# 事前に確認したファイル数 86 個があった
+
+cat list.txt
+0e236eacfd30c201e85ff368730f13e6dfb24d21a72c57c8bed0a099bebb3c7b  github.com/go-chi/chi/v5@v5.3.2/.github/FUNDING.yml
+4332e758142ca72fd505b77fa58518e5586caae8a6a1260ae2758d4aedeeccd3  github.com/go-chi/chi/v5@v5.3.2/.github/workflows/ci.yml
+785f18e2ac99c66b81d8d185aa1a65cfe4f39b12bef24c1f8037d85840490929  github.com/go-chi/chi/v5@v5.3.2/.gitignore
+65c419049d2e6efc04b110426e4b5efc628a4ee6b8f080092f25a0dbbb35f071  github.com/go-chi/chi/v5@v5.3.2/CHANGELOG.md
+961da16c4fcec58d600fd49cc6ab0dd632d143646d4fcb2f5b1818fb0197fbe7  github.com/go-chi/chi/v5@v5.3.2/CONTRIBUTING.md
+a2d51b7515acfaff2f7a88688650f2fc4fd99561383e72bba2305e3db59a1647  github.com/go-chi/chi/v5@v5.3.2/LICENSE
+b343163c9d40108d37c7e5fe73e3c1d8f39c2acf26de5d1d227a1be2770205ad  github.com/go-chi/chi/v5@v5.3.2/Makefile
+5e10ec94a4afe399d9ed4d9918d77a541fa30ea3bbc96086b6379d29e7af3a1d  github.com/go-chi/chi/v5@v5.3.2/README.md
+c5f181d947996aebd888182fb8dccf6e7026690e701b5e5ca50b288b4a2cf5c3  github.com/go-chi/chi/v5@v5.3.2/SECURITY.md
+6cf07102bf746267aeb610fb44c1a591ca2b4133e020b4c3428b02598cc089d8  github.com/go-chi/chi/v5@v5.3.2/_examples/README.md
+1a7e8131f1ed48303dc42d93bc50ea330f08f0875cba64d0d03eb96754984127  github.com/go-chi/chi/v5@v5.3.2/_examples/chi.svg
+e5a1f419488c233784f1f7951089305915b377af7462f137cd9bb5fd2a792924  github.com/go-chi/chi/v5@v5.3.2/_examples/custom-handler/main.go
+de61c6c6cad7f28a9b8b506d32bba52485f6e902ae25954913e8480fa5cfd8a5  github.com/go-chi/chi/v5@v5.3.2/_examples/custom-method/main.go
+9e343fdfdcb2892c5eb6906d405f9ac1f7cb1d73cd8b7f31cf6329719af96576  github.com/go-chi/chi/v5@v5.3.2/_examples/fileserver/data/notes.txt
+0c0b96e8104689bc86312805d70a97aea7c870801f09ca03dd47c8edde31f620  github.com/go-chi/chi/v5@v5.3.2/_examples/fileserver/main.go
+ad28151bf414776f787655d76fa42063a4174f95eeef6887a1724d9b3bfc32b5  github.com/go-chi/chi/v5@v5.3.2/_examples/graceful/main.go
+e8104f868c9a673d864c489347970200808acc0652035a0376694bf5b7b07c86  github.com/go-chi/chi/v5@v5.3.2/_examples/hello-world/main.go
+590c6d2f322481fed8abe1c2ca34eb0868f0d0a07d1c6aaccc0d6589b59a5d0d  github.com/go-chi/chi/v5@v5.3.2/_examples/limits/main.go
+7b3cf7fb608cc030569d4bf75d30f0807ba0849543ee469ad5adadd13a3b8667  github.com/go-chi/chi/v5@v5.3.2/_examples/logging/main.go
+11dd0741795c3c2f140b35b280a032a56241dea20c0e20b7cf191a0aedcdcac0  github.com/go-chi/chi/v5@v5.3.2/_examples/pathvalue/main.go
+48c27bf0d7668fccfe7a9f6dac9199ee6240fe7a43855677c1f509e16732e2b6  github.com/go-chi/chi/v5@v5.3.2/_examples/router-walk/main.go
+a0a551b6d6ca81210b129cd2a70d76e38370b2461be78813e6f117cfef6da020  github.com/go-chi/chi/v5@v5.3.2/_examples/todos-resource/main.go
+5979a0124dbb9febcc1c6846ed843590d40f5ae440d2694e57c0860bf7bc395c  github.com/go-chi/chi/v5@v5.3.2/_examples/todos-resource/todos.go
+212c60277ace9afb95ef02729be959c2c39472a14854d2af95c711c265e3778f  github.com/go-chi/chi/v5@v5.3.2/_examples/todos-resource/users.go
+8c22d7bbc23f4b4d46ded5ef721a9c3a173031fa2c2c9a7b48c46c2b07e8bd80  github.com/go-chi/chi/v5@v5.3.2/chain.go
+b659c130bc881c5cbaf03080497e3a25e6acbbed7c100ff7d19bf25f9bc64538  github.com/go-chi/chi/v5@v5.3.2/chi.go
+bf1f093c84b276cc4790a23014f37abc92f85c0e4f5f6ed4830a233a29628916  github.com/go-chi/chi/v5@v5.3.2/context.go
+74348e8085391a4f0a2af2f2e680debe8ffd7a5105d760451e7c9448dfd9e4a8  github.com/go-chi/chi/v5@v5.3.2/context_test.go
+4d88d6917853bbb427146ba26661b51a21f8780f524162c9797a5769464e1482  github.com/go-chi/chi/v5@v5.3.2/go.mod
+d1cfa0a32e9871cfba478590d1c1010297df20e53bbf83f34b09a4ec76e8b278  github.com/go-chi/chi/v5@v5.3.2/middleware/basic_auth.go
+00cf47dd47cf4b6a1fa29dd3d5cdff4f7de8adbea410801128afe8aeaed35f0d  github.com/go-chi/chi/v5@v5.3.2/middleware/clean_path.go
+68b1ba991406b3e0e8a86253143ce432554d2134e66a4a87417b19ecebe2ff8f  github.com/go-chi/chi/v5@v5.3.2/middleware/client_ip.go
+6d432c0cb67290969057d899738970fb59c73b96bb9812f75d0a37dcc2a64946  github.com/go-chi/chi/v5@v5.3.2/middleware/client_ip_bench_test.go
+4a00c5e73326b5be7985b99e433ef87ae90ec415dbb2a0a9cb366b81fb57b3b6  github.com/go-chi/chi/v5@v5.3.2/middleware/client_ip_example_test.go
+bfc0d690534b833f73117d8a4c25aaedef6923c3145b6aadd3a0c149e2a427de  github.com/go-chi/chi/v5@v5.3.2/middleware/client_ip_test.go
+493386222123e44826bb85ae88ed9c52b87d6d272ce8aacd949e13c42f7c552b  github.com/go-chi/chi/v5@v5.3.2/middleware/compress.go
+49c8a68651c0542fde332dd035990226dd344d05b980e6591e46f0777a6571bb  github.com/go-chi/chi/v5@v5.3.2/middleware/compress_test.go
+97fa5e37fc74e5bd2be57cb73d5a2abed89b198309056ffca6c3e819c5dde5d4  github.com/go-chi/chi/v5@v5.3.2/middleware/content_charset.go
+39f7d5333c1f47a11796952ed1ec13aa6dd880c940069a2c49552c2936e2c1a1  github.com/go-chi/chi/v5@v5.3.2/middleware/content_charset_test.go
+a1b35d124400a423d385eca9d066593c790e867db165af75e25b31b649d37fd8  github.com/go-chi/chi/v5@v5.3.2/middleware/content_encoding.go
+98bf93fb59e1613843f8f838ddb17dc160cf88dd95135b1b2637e188c69c4644  github.com/go-chi/chi/v5@v5.3.2/middleware/content_encoding_test.go
+5cedd359e3390edc613557681dda3cbc60faa2e4efb2a8974464876377b3a797  github.com/go-chi/chi/v5@v5.3.2/middleware/content_type.go
+233f0c2f27f3d37719c6abc393c86804424a47d1ccebe17b018629b42f05a050  github.com/go-chi/chi/v5@v5.3.2/middleware/content_type_test.go
+76af2014d2080f597a0205f51265badcad7af64d09652a79ed1a214074f5c582  github.com/go-chi/chi/v5@v5.3.2/middleware/get_head.go
+a660972a6e389bbea07db1414dd72c0593809c644a941b431ce43c902ec65099  github.com/go-chi/chi/v5@v5.3.2/middleware/get_head_test.go
+fc242f8c645cfc7640a36bccccb490cad9136ed07a751b0998f554412c29bca4  github.com/go-chi/chi/v5@v5.3.2/middleware/heartbeat.go
+8e727c3d7630e6915f92bbf7e635bb5232e99bff73709151e7f17e9b5129b302  github.com/go-chi/chi/v5@v5.3.2/middleware/logger.go
+f15a9900122e075c3b2d146aeae6128dfe17d57a45ef40b06f7a9e74cc4fb35f  github.com/go-chi/chi/v5@v5.3.2/middleware/logger_test.go
+d600d7ea5b3184ea8ea952a145b1fca21e458b94601eae4a6cb215b3a04a3dee  github.com/go-chi/chi/v5@v5.3.2/middleware/maybe.go
+8789f84814d815185cb5a7bc6c247969b67d0ff9b8045ee1c95f4c9ad59ff4b1  github.com/go-chi/chi/v5@v5.3.2/middleware/middleware.go
+81744b82c9ea90b57a384c4a44cd889f7f5ab446b35eeb3d34983d0419a860bc  github.com/go-chi/chi/v5@v5.3.2/middleware/middleware_test.go
+389eb1e308194561aea139b8d56d49f46b9fb30d84f8da146f5deaea66c5f5cc  github.com/go-chi/chi/v5@v5.3.2/middleware/nocache.go
+03f3b50c4a55c345b52ce8f4b6d5da4b977647dd66e2e59b5f3635bda93e779c  github.com/go-chi/chi/v5@v5.3.2/middleware/page_route.go
+0f3c01a40e320494a093d804376f3be8519b86285b5e24e8937bcee2c13c9279  github.com/go-chi/chi/v5@v5.3.2/middleware/path_rewrite.go
+5b21bca97731b2df9aff87767ea1325b77a401c823fa6cdcf52ad38616d48faa  github.com/go-chi/chi/v5@v5.3.2/middleware/profiler.go
+2f837f2213de7074c5c6915dad70f85c4588077291a8563d1cbad6698a757220  github.com/go-chi/chi/v5@v5.3.2/middleware/realip.go
+6cab78b3ebc7fd581261afae6740423edc2199d9ba7ae3e0ffda99354f90d534  github.com/go-chi/chi/v5@v5.3.2/middleware/realip_test.go
+472571093397d19475fd36ac1816a5c8e8de7706a9be9b155eb360657ca5f076  github.com/go-chi/chi/v5@v5.3.2/middleware/recoverer.go
+1d7dd1b9f50370cd38ef5ff4738f12b811e304e1881175a1b1fea3d84fc4389f  github.com/go-chi/chi/v5@v5.3.2/middleware/recoverer_test.go
+31b21034dd5cd6393fa9abc9ce1207acc78fea1e162d866edf6bb2a7badd288b  github.com/go-chi/chi/v5@v5.3.2/middleware/request_id.go
+519e920890f2a33b77d0140a4a8ffcc933752bc04b3efb0af0793e11722b639e  github.com/go-chi/chi/v5@v5.3.2/middleware/request_id_test.go
+81a98f72a81442a01a4353be9833fda6803f585bf768cebde5a34ebc1c44c390  github.com/go-chi/chi/v5@v5.3.2/middleware/request_size.go
+cfd320f1a996ac95e29e25ab8a2ffa9606577996d6e001fb3835ede2795a3f69  github.com/go-chi/chi/v5@v5.3.2/middleware/route_headers.go
+dd48799f1da69155927452801354ef413a97b1a83109fc8ad5f0560ae1f66906  github.com/go-chi/chi/v5@v5.3.2/middleware/route_headers_test.go
+d5a0929e147b8b2a58ee78f0166a67f0949255b698bd5d26983a62643fc8fe10  github.com/go-chi/chi/v5@v5.3.2/middleware/strip.go
+1002bd43aea540f4661806adcfc6ad21525e1e2c1e9fb92f47dda16fdaae0a4d  github.com/go-chi/chi/v5@v5.3.2/middleware/strip_test.go
+16d99c4da576c4b7c024a12da139421d5659290250bed8f3d3ff6e0ed5d93b0e  github.com/go-chi/chi/v5@v5.3.2/middleware/sunset.go
+ea640c109f86cc5d1fbceea558e3ab983d8f0de642c16fd2b4ad750efada0101  github.com/go-chi/chi/v5@v5.3.2/middleware/sunset_test.go
+b3c6cb935d27aaddef0dcb5d165447babf5e9bb42cf28b4ee4e5f4693810888f  github.com/go-chi/chi/v5@v5.3.2/middleware/supress_notfound.go
+da7433dde376ab7deef82ff5acad6bbbc64beca4dad95372468a5747e23dfaa3  github.com/go-chi/chi/v5@v5.3.2/middleware/terminal.go
+05569797a14131ba177a71fccccd509363ca2016fa4c45a31cff033ae44301e4  github.com/go-chi/chi/v5@v5.3.2/middleware/throttle.go
+a042c50fcbd5b72039329189aa3c1927636eb0ba3be3494dcf23e5ad4bd06ee2  github.com/go-chi/chi/v5@v5.3.2/middleware/throttle_test.go
+3e83d007ec300b4ea605d97a336351e562ecd84b32c2b26206791d11ce7501c0  github.com/go-chi/chi/v5@v5.3.2/middleware/timeout.go
+a1ea4ec9039b5a704f8aea7754a9b00d8026b72d18ba98208cd04b182e1b5800  github.com/go-chi/chi/v5@v5.3.2/middleware/url_format.go
+04efa8cfbda922ff671ab3bdbc00f6fa06bf776c300dc8605815de1def33aaa1  github.com/go-chi/chi/v5@v5.3.2/middleware/url_format_test.go
+2ccb524ee5ccd68885ff0d1de052068026f5c3298705fec930175e2ec06a1f91  github.com/go-chi/chi/v5@v5.3.2/middleware/value.go
+bd6e76151cacaee5fdb11af48cf3c417f4587967cac8e7193a3cc0f7febe2f5b  github.com/go-chi/chi/v5@v5.3.2/middleware/wrap_writer.go
+16392ba2eb524e838e2c3295dfa7a229339a478f85ac99466683074464435bce  github.com/go-chi/chi/v5@v5.3.2/middleware/wrap_writer_test.go
+3255394e5c4f305b47b81e2e3912caaf58455223fe7a126cec5c494c663adb24  github.com/go-chi/chi/v5@v5.3.2/mux.go
+c5240fec77d33920527c3676aeade48346fa1a0a79ccf2acc456cb673ebea012  github.com/go-chi/chi/v5@v5.3.2/mux_test.go
+2c6f68e8540ceb9953869fbf57721ca6b03943c1903011bb0dcea202aa5d9fd8  github.com/go-chi/chi/v5@v5.3.2/path_value_test.go
+2cb5166ea7db6a38ac3b67bf40ea2fd82393311967888a71e3b296592119d06e  github.com/go-chi/chi/v5@v5.3.2/pattern_test.go
+8fb47f5e036bcb4daaeed180fa7164504a8ca43bdc010fd418618da48fdd340c  github.com/go-chi/chi/v5@v5.3.2/testdata/cert.pem
+fecae623b5a0ae0a1110285c66e3e0e7f6019f49fd540ed3d9b85f65b9054f6c  github.com/go-chi/chi/v5@v5.3.2/testdata/key.pem
+790a26ead9f2f9bb93e61f2c7ee588096068a26afcf56e115801753bd7ed230c  github.com/go-chi/chi/v5@v5.3.2/tree.go
+47488f281c1d81ed2a0a68c29f9524cd48eba23e827cb5a7e2584d6eab8b7042  github.com/go-chi/chi/v5@v5.3.2/tree_test.go
+```
+
+「連結」といっても、1 ファイル 1 行のテキストファイル（86 行・10452 バイト）ができるだけです。これが「リスト」です。`LC_ALL=C` を付けるのは、Go の `slices.Sort` と同じバイト順で並べるためです。ロケール依存の順序で並べると、リストが変わってハッシュも変わります。`find .` ではなく `find github.com` にしているのは、書き出し中の `list.txt` 自身を拾わないためです。
+
+**4. リスト全体の sha256 を取り、base64 して `h1:` を付ける**
+
+```sh
+shasum -a 256 list.txt
+e58424202bd3092676e61a11b3225accdd2c723cca1a2bb854051cec7d68d676  list.txt
+# リスト全体の sha256 を取得
+
+shasum -a 256 list.txt | cut -d' ' -f1 | xxd -r -p | base64
+5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
+# リスト全体の sha256 の  「e58424202bd3092676e61a11b3225accdd2c723cca1a2bb854051cec7d68d676」 を取得
+# xxd -r -p で 文字列に変換、それを base64 化する
+```
+
+base64 にかけるのは 64 文字の hex(16進数) 文字列ではなく、 hex が表す 32 バイトのバイト列です（`xxd -r -p` で hex からバイト列に戻しています）。頭に `h1:` を付けた `h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=` は、`go.sum` の 1 行目の値と一致します。
 
 つまり**ファイル名と内容のリストのハッシュ**です。zip の圧縮レベル・タイムスタンプ・エントリ順序には依存しません。だから zip 内の日付が全部 `1980-00-00` に潰されていても問題になりません。
 
-ハッシュ対象の名前は zip 内のフルパスです。
-
-```txt
-github.com/go-chi/chi/v5@v5.3.2/.gitignore
-github.com/go-chi/chi/v5@v5.3.2/CHANGELOG.md
-...
-```
-
-`golang.org/x/mod/sumdb/dirhash` で再計算すると、`go.sum` の値と一致します。
+Go から同じ計算をするなら、`golang.org/x/mod/sumdb/dirhash` の 1 行で済みます。
 
 ```go
 dirhash.HashZip(".../v5.3.2.zip", dirhash.Hash1)
 // h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=  → go.sum と一致
 ```
 
-`/go.mod` 行も同じ H1 ですが、**ファイル名が literal `go.mod` 1 個だけ**のリストを対象にします。名前を変えると値が変わるので、ここは実際に試すと分かりやすいです。
+`/go.mod` 行も同じ H1 ですが、対象はソースアーカイブではなく `v5.3.2.mod` 1 ファイルです。リストに書くファイル名は literal の `go.mod` です。
+
+```sh
+D=$(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v
+printf '%s  go.mod\n' "$(shasum -a 256 $D/v5.3.2.mod | cut -d' ' -f1)" > modlist.txt
+
+cat modlist.txt
+4d88d6917853bbb427146ba26661b51a21f8780f524162c9797a5769464e1482  go.mod
+
+shasum -a 256 modlist.txt | cut -d' ' -f1 | xxd -r -p | base64
+R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto=
+```
+
+`h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto=` は `go.sum` の 2 行目（`/go.mod h1:`）と一致します。名前を変えると値が変わるので、ここは実際に試すと分かりやすいです。
 
 ```txt
 name = "github.com/go-chi/chi/v5@v5.3.2/go.mod" → h1:ZsvrnqFWiQ1WrgDxRZ...  一致しない
@@ -736,7 +1195,7 @@ github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutV
 ### 6 ステップの実体まとめ
 
 ```txt
-1. MVS + import path の接頭辞の総当たり（→ 余分な chi v1.5.5 の取得）
+1. MVS + import path の各接頭辞への最新バージョン要求（→ 余分な chi v1.5.5 の取得）
 2. proxy の 5 エンドポイントを HTTP GET、または git を直叩き
 3. cache/download に生データ、<mod>@<ver>/ に読み取り専用の展開ツリー
 4. H1 = sha256(「sha256 hex + ファイル名」の行をソートして連結したリスト)
