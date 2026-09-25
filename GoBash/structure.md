@@ -29,7 +29,7 @@
 | --- | --- | --- |
 | 0:00 | 自己紹介 + OPTiM（**30秒・1枚**。ここで2分使うと本題が8分になる） | - |
 | 0:30 | 【問い】`ls` を2つ並べる / `go env GOMODCACHE` で即答 / **2プロジェクト共有の絵** / 本当の問いを提示 | 疑問5 |
-| 2:00 | 【前提】go.mod は依存リストではなく「宣言」 | 疑問1（圧縮） |
+| 2:00 | 【前提】package.json は幅、go.mod はピンポイント（go.mod は「宣言」） | 疑問1（圧縮） |
 | 3:00 | 【go.sum】生まれる瞬間 → 2行の意味 → **消してもバージョンは変わらない** | 疑問4 / 7 / 9 |
 | 6:00 | 【回収】共有キャッシュが成立する3条件 + read-only の実演 | 疑問5 |
 | 8:30 | 【対比】npm / pnpm / Go の1枚 | 疑問5 |
@@ -41,7 +41,7 @@
 
 1枚。所属と一言だけ。会社紹介パートは作らない。
 
-### 2. 問い（0:30-2:00） 「npm と Golang の一番の違いは何だと思いますか？」
+### 2. 問い 「npm と Golang の一番の違いは何だと思いますか？」
 
 90秒の配分。
 
@@ -142,14 +142,71 @@ npm
 - 別のプロジェクトが中身を書き換えたら？
 - コミッターが v5.3.2 のタグを別のコミットに付け替えたら？
 
-### 3. 前提: go.mod は「宣言」（2:00-3:00）
+### 3. 方針: 「go.mod, go.sum を手掛かり探る」
 
-1枚。`go mod init` = このディレクトリを Module として宣言するコマンド。
-依存を書く前から go.mod がある理由。
+#### package.json は範囲、go.mod はピンポイント
+
+Golangのimageファイル作成
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=text%2Fx-go&width=561&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%252F%252F%2520https%253A%252F%252Fgo.dev%252Fref%252Fmod%2523go-mod-file-module%250A%252F%252F%2520module%2520%25E3%2583%2587%25E3%2582%25A3%25E3%2583%25AC%25E3%2582%25AF%25E3%2583%2586%25E3%2582%25A3%25E3%2583%2596%25E3%2581%25AF%25E3%2580%2581%25E3%2581%259D%25E3%2581%25AE%25E3%2583%25A2%25E3%2582%25B8%25E3%2583%25A5%25E3%2583%25BC%25E3%2583%25AB%25E8%2587%25AA%25E8%25BA%25AB%25E3%2581%25AE%25E3%2583%25A2%25E3%2582%25B8%25E3%2583%25A5%25E3%2583%25BC%25E3%2583%25AB%25E3%2583%2591%25E3%2582%25B9%25E3%2582%2592%25E5%25AE%259A%25E7%25BE%25A9%25E3%2581%2599%25E3%2582%258B%250Amodule%2520github.com%252Ftakumashiraki%252Fconference-report%252FGoBash%252Fex-Go%250A%250A%252F%252F%2520https%253A%252F%252Fgo.dev%252Fref%252Fmod%2523go-mod-file-go%250A%252F%252F%2520go%2520%25E3%2583%2587%25E3%2582%25A3%25E3%2583%25AC%25E3%2582%25AF%25E3%2583%2586%25E3%2582%25A3%25E3%2583%2596%25E3%2581%25AF%25E3%2580%2581%25E3%2581%259D%25E3%2581%25AE%25E3%2583%25A2%25E3%2582%25B8%25E3%2583%25A5%25E3%2583%25BC%25E3%2583%25AB%25E3%2581%258C%25E3%2581%25A9%25E3%2581%25AE%2520Go%2520%25E3%2583%2590%25E3%2583%25BC%25E3%2582%25B8%25E3%2583%25A7%25E3%2583%25B3%25E3%2581%25AE%25E4%25BB%2595%25E6%25A7%2598%25E3%2583%25BB%25E6%258C%2599%25E5%258B%2595%25E3%2582%2592%25E5%2589%258D%25E6%258F%2590%25E3%2581%25A8%25E3%2581%2597%25E3%2581%25A6%25E6%259B%25B8%25E3%2581%258B%25E3%2582%258C%25E3%2581%25A6%25E3%2581%2584%25E3%2582%258B%25E3%2581%258B%25E3%2582%2592%25E7%25A4%25BA%25E3%2581%2599%250Ago%25201.26.8%250A%250A%252F%252F%2520https%253A%252F%252Fgo.dev%252Fref%252Fmod%2523go-mod-file-require%250A%252F%252F%2520require%2520%25E3%2583%2587%25E3%2582%25A3%25E3%2583%25AC%25E3%2582%25AF%25E3%2583%2586%25E3%2582%25A3%25E3%2583%2596%25E3%2581%25AF%25E3%2580%2581%25E4%25BE%259D%25E5%25AD%2598%25E3%2581%2599%25E3%2582%258B%25E3%2583%25A2%25E3%2582%25B8%25E3%2583%25A5%25E3%2583%25BC%25E3%2583%25AB%25E3%2581%25AB%25E3%2581%25A4%25E3%2581%2584%25E3%2581%25A6%25E5%25BF%2585%25E8%25A6%2581%25E3%2581%25A8%25E3%2581%25AA%25E3%2582%258B%25E6%259C%2580%25E4%25BD%258E%25E3%2583%2590%25E3%2583%25BC%25E3%2582%25B8%25E3%2583%25A7%25E3%2583%25B3%25E3%2582%2592%25E6%258C%2587%25E5%25AE%259A%25E3%2581%2599%25E3%2582%258B%250Arequire%2520github.com%252Fgo-chi%252Fchi%252Fv5%2520v5.3.2%250A -->
+
+npmのimageファイル
+
+package.json
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fjson&width=320&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%257B%250A%2520%2520%252F%252F%25205.2.1%2520%25E4%25BB%25A5%25E4%25B8%258A%25206.0.0%2520%25E6%259C%25AA%25E6%25BA%2580%25E3%2582%2592%25E4%25BD%25BF%25E3%2581%2586%250A%2520%2520%2522dependencies%2522%253A%2520%257B%250A%2520%2520%2520%2520%2522express%2522%253A%2520%2522%255E5.2.1%2522%250A%2520%2520%257D%250A%257D -->
+
+公式仕様がそう書いている（[go.dev/ref/mod](https://go.dev/ref/mod#go-mod-file)）。
+
+```text
+module  … "A module directive defines the main module's path."
+go      … "A go directive indicates that a module was written assuming the semantics of a given version of Go."
+require … "A require directive declares a minimum required version of a given module dependency."
+```
+
+go.mod は「入れた物の一覧」ではなく、**このモジュールの自己申告**。書くのは人と `go get`、読むのは go コマンド。
+依存を1つも書かないうちから `go mod init` で go.mod ができるのは、`module` 行（自分は誰か）が先に要るから（疑問1）。
+
+```text
+package.json       "express": "^5.2.1"    → >=5.2.1 <6.0.0-0 の範囲（npm 同梱 semver で確認）
+package-lock.json  "version": "5.2.1"     → 範囲から選んだ結果の記録
+
+go.mod             require github.com/go-chi/chi/v5 v5.3.2   → 幅を書かない。ピンポイント
+```
+
+- npm は「範囲の宣言（package.json）」と「結果の記録（lock）」の2枚で1組
+- Go の go.mod は最初からピンポイントで版を宣言する。結果の記録を別に持たなくてよい
+- → では go.sum は何を記録しているのか？ がスライド4への橋
+
+##### スライド本文（案・8行以内）
+
+```text
+# go.mod（ex-Go）
+module github.com/takumashiraki/…/ex-Go   ← 自分は誰か
+go 1.26.8                                 ← どの Go の意味で書いたか
+require github.com/go-chi/chi/v5 v5.3.2   ← 何を、どの版から要るか
+
+# package.json（ex-npm）
+"express": "^5.2.1"                       ← 幅。どれを入れたかは lock
+```
+
+##### トーク（約60秒）
+
+> go.mod を開くと3行しかありません。仕様では、それぞれが defines / indicates / declares、つまり「自分は誰で、どの Go で書いて、何が要るか」の自己申告です。
+> package.json も同じく自己申告ですが、`^5.2.1` は幅なので、実際にどれを入れたかは package-lock.json に記録するしかない。
+> go.mod は幅を書かず、ピンポイントで版を書きます。じゃあ Go の go.sum は何を記録しているのか。ここから本題です。
+
+##### 言わないこと・注意
+
+- `require` は仕様上 **minimum** required version。実際に選ばれる版の決め方（MVS）は今回入れない方針なので、「どの版から要るか」と言うに留める。
+  突っ込まれたらディスカッションに回す（ex-Go は chi 1個・chi は依存なしなので選ばれるのは v5.3.2 そのもの）
+- 「だから lock が要らない」とは**このスライドでは言わない**。言い切るには MVS の決定性が要る（疑問12・未検証）。
+  スライド4の「go.sum を消しても変わらない」という実測で見せる
+- `module` 行が回収（スライド5 条件2）にもつながる: chi 自身の go.mod は `module github.com/go-chi/chi/v5` と宣言しており、
+  これがそのままキャッシュのパス `github.com/go-chi/chi/v5@v5.3.2` になる。キャッシュには宣言だけの `v5.3.2.mod` も別に置かれている
+  （= go.sum 2行目 `/go.mod h1:` のハッシュ対象。スライド4(b)）。尺があれば1行で触れる
 
 ※ 標準パッケージの話（疑問2・3）は**全カット**。回収に寄与しない。
 
-### 4. go.sum の解体（3:00-6:00）
+#### go.sum は lock ファイルか？
 
 **(a) 生まれる瞬間**
 
