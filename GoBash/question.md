@@ -1121,18 +1121,16 @@ SECURITY ERROR: checksum mismatch
 
 ```sh
 cat $(go env GOMODCACHE)/cache/download/sumdb/sum.golang.org/lookup/github.com/go-chi/chi/v5@v5.3.2
-```
 
-```txt
-60295460
-github.com/go-chi/chi/v5 v5.3.2 h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
-github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto=
+60295460 ← sumdb のログ上でこのレコードが何番目か
+github.com/go-chi/chi/v5 v5.3.2 h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY= ← モジュール本体の zip のハッシュ
+github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto= ← go.mod のハッシュ
 
-go.sum database tree
-63096908
-8lHrQPRYe4KT4WQ9/Qk8/taKnD6IRHbFgfN7vQE2Y54=
+go.sum database tree ← ここから下は署名付きツリーヘッド
+63096908 ← 応答時点でのツリーのサイズ
+8lHrQPRYe4KT4WQ9/Qk8/taKnD6IRHbFgfN7vQE2Y54= ← ツリーのルートハッシュ
 
-— sum.golang.org Az3gri/oVBN1jAhNZ/iS+W31psFAWRT20/GyrhpU6taFwulQGetBkH5S7wpGXdS935jiIGiUUAXBVHzT/P6fYhqAmAk=
+— sum.golang.org Az3gri/oVBN1jAhNZ/iS+W31psFAWRT20/GyrhpU6taFwulQGetBkH5S7wpGXdS935jiIGiUUAXBVHzT/P6fYhqAmAk= ← sum.golang.org の署名
 ```
 
 行ごとの意味はこうです。
@@ -1145,7 +1143,99 @@ go.sum database tree
 | `8lHrQPR...` | Merkle ツリーのルートハッシュ |
 | `— sum.golang.org ...` | ed25519 署名（signed note 形式） |
 
+実際に GOSUMDB へ問い合わせた
+```bash
+❯ curl https://sum.golang.org/lookup/github.com/go-chi/chi/v5@v5.3.2
+
+60295460
+github.com/go-chi/chi/v5 v5.3.2 h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
+github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto=
+
+go.sum database tree
+65407379
+dK1AMX6HRs4Y7ySXO6fz9vRJ2jqAzUBCb6nT+9xX0Yw=
+
+— sum.golang.org Az3grhTyxGxrAVvP04jEuMx3rQ8zlVpC/zZ63hHNDrfY9pNqRZKJ3CmwtZRwo4/miSTqm/X9vWmsY33TVqukQA5V5gI=
+```
+
 重要なのは、**この署名の検証鍵が go コマンドのバイナリに埋め込まれている**ことです。だから `proxy.golang.org` を信用する必要がありません。プロキシ経由で checksum database の応答を中継してもらっても（`GET /sumdb/sum.golang.org/lookup/...`）、署名が合わなければ弾かれます。
+
+> 疑問: 「この署名」とは何か？ 「検証鍵」はどこで出てきたのか？ 「go コマンドのバイナリに埋め込まれている」とはどういうことか？
+
+先に用語をそろえておきます。
+
+| 用語 | 意味 |
+|---|---|
+| 電子署名 | データに「確かに本人が出したもの」という印を付ける仕組み。印を作る鍵（秘密鍵）と、印を確かめる鍵（公開鍵）が 1 組になっている。秘密鍵は持ち主だけが持ち、公開鍵は誰に配ってもよい。公開鍵から秘密鍵は割り出せないので、公開鍵を持っていても印は偽造できない |
+| Ed25519 | 電子署名の方式の 1 つ。公開鍵は 32 バイト、署名は 64 バイトと小さい |
+| 検証鍵 | 署名を確かめる側が使う公開鍵。上の段落の「検証鍵」は sum.golang.org の公開鍵を指す |
+| バイナリ | ソースコードをビルドしてできた実行ファイル。ここでは `go` コマンドそのもの（`which go` で表示されるファイル） |
+
+**「この署名」とは**
+
+上のキャッシュの最終行 `— sum.golang.org Az3gri/...` です。sum.golang.org を運営する Google が、自分の秘密鍵で作った印です。
+
+印が付いているのは、その直前の 3 行だけです。
+
+```txt
+go.sum database tree
+63096908
+8lHrQPRYe4KT4WQ9/Qk8/taKnD6IRHbFgfN7vQE2Y54=
+```
+
+この 3 行は「いまの台帳には 63096908 件の記録があり、台帳全体をまとめたハッシュはこれです」という宣言で、**tree head**（ツリーの見出し）と呼びます。`h1:` の 2 行には直接の印は付いていません。2 行がこの宣言どおりの台帳に本当に入っているかは、このあと説明する包含証明で確かめます。
+
+署名の文字列を Base64 から元のバイト列に戻すと 68 バイトあり、2 つに分かれます。
+
+```sh
+echo 'Az3gri/oVBN1jAhNZ/iS+W31psFAWRT20/GyrhpU6taFwulQGetBkH5S7wpGXdS935jiIGiUUAXBVHzT/P6fYhqAmAk=' | base64 -d | xxd | head -1
+
+00000000: 033d e0ae 2fe8 5413 758c 084d 67f8 92f9  .=../.T.u..Mg...
+```
+
+- 先頭 4 バイト `033de0ae` は**鍵 ID**（どの鍵で作った印かを示す番号）
+- 残り 64 バイトは Ed25519 の署名本体
+
+**「検証鍵」はどこにあるか**
+
+go のソースコードに、文字列の定数として書かれています。
+
+```sh
+cat $(go env GOROOT)/src/cmd/go/internal/modfetch/key.go
+```
+
+```go
+var knownGOSUMDB = map[string]string{
+	"sum.golang.org": "sum.golang.org+033de0ae+Ac4zctda0e5eza+HJyk9SxEdh+s3Ux18htTTAD8OuAn8",
+}
+```
+
+`+` で区切った 3 つの部分の意味は次のとおりです。
+
+| 部分 | 意味 |
+|---|---|
+| `sum.golang.org` | 鍵の名前。署名行の `— sum.golang.org` と照らし合わせる |
+| `033de0ae` | 鍵 ID。署名の先頭 4 バイトと同じ値 |
+| `Ac4zctda...` | Base64 を戻すと 33 バイト。先頭 1 バイトが方式の種類（Ed25519）、残り 32 バイトが公開鍵そのもの |
+
+鍵 ID が署名の先頭 4 バイトと一致するので、「この印は、この公開鍵と対になる秘密鍵で作られた」と対応が付きます。go はこの公開鍵を使って tree head の 3 行と署名を確かめ、合わなければエラーにします。`GOSUMDB` が既定値の `sum.golang.org` のときは、同じディレクトリの `sumdb.go` がこの表から鍵を引いています。
+
+**「バイナリに埋め込まれている」とは**
+
+`knownGOSUMDB` はソースコード中の定数なので、go をビルドすると文字列がそのまま実行ファイルの中に入ります。設定ファイルや環境変数から読むわけではなく、通信で取ってくるわけでもありません。実行ファイルから文字列を抜き出すと、同じ鍵が見つかります。
+
+```sh
+strings $(which go) | grep -o 'sum.golang.org+033de0ae+.\{44\}'
+
+sum.golang.org+033de0ae+Ac4zctda0e5eza+HJyk9SxEdh+s3Ux18htTTAD8OuAn8
+```
+
+プロキシを信用しなくてよい理由は、ここにあります。
+
+- 確かめる鍵は go の中に最初から入っている。途中にいる proxy.golang.org は鍵を差し替えられない
+- proxy.golang.org は秘密鍵を持っていない。中継する内容を書き換えると印が合わなくなる
+
+裏を返すと、この鍵を信用することは「go 本体を正しい配布元から入手した」ことを信用するのと同じです。鍵を変えるには、go 本体を作り直すか、`GOSUMDB` に別の鍵を明示するしかありません。
 
 さらに「レコード `60295460` が本当にルートハッシュ `8lHrQPR...` のツリーに含まれるか」を Merkle の包含証明で確認します。そのために取得する断片が tile です。
 
@@ -1167,9 +1257,46 @@ h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
 
 なお `GOPRIVATE` / `GONOSUMDB` に一致するモジュールや `GOSUMDB=off` の場合は (b) をスキップします。プライベートリポジトリのパスを公開 checksum database に送らないための逃げ道です。
 
+**なぜ改ざんできないのか**
+
+ここまでの (a)〜(c) を「誰が、何を差し替えようとするか」で並べ直すと、どの段で止まるかが見えます。
+
+| 差し替えようとする人 | やること | 止まる場所 |
+|---|---|---|
+| モジュールの作者 | 公開済みの `v5.3.2` のタグを付け替えて、中身を差し替える | すでに go.sum に行があるプロジェクトは (a) で止まる。新しく取得する人も、checksum database に最初のハッシュが残っていて書き換えられないので (b) で止まる |
+| 途中のプロキシ・通信経路 | zip を差し替える | 手元で計算した H1 が checksum database のハッシュと合わず、(b) で止まる |
+| 途中のプロキシ・通信経路 | checksum database の応答も偽のハッシュに書き換える | 秘密鍵を持っていないので、書き換えた tree head に正しい署名を付けられない。検証鍵は go バイナリの中にあるので、鍵ごと差し替えることもできない |
+| checksum database の運営者 | 特定の人にだけ偽のハッシュを返す | 偽のハッシュを包含証明に通すには、それを載せた台帳を作って署名するしかない。そうすると正しい台帳とは別の枝（fork）ができる。go は最後に確かめた tree head を `$(go env GOPATH)/pkg/sumdb/sum.golang.org/latest` に保存している。新しい tree head を受け取るたびに古い tree head を含むかを確かめるので、枝分かれに気付く |
+
+止まったときに go が出すメッセージは、go のソースに書かれています。場所は `src/cmd/go/internal/modfetch/fetch.go` と `src/cmd/vendor/golang.org/x/mod/sumdb/client.go` です。
+
+```txt
+# (a) go.sum と合わない
+SECURITY ERROR
+This download does NOT match an earlier download recorded in go.sum.
+
+# (b) checksum database と合わない
+SECURITY ERROR
+This download does NOT match the one reported by the checksum server.
+
+# checksum database の台帳が枝分かれしている
+SECURITY ERROR
+go.sum database server misbehavior detected!
+```
+
+ここでいう「改ざんできない」は、差し替えそのものを防ぐという意味ではありません。差し替えるとハッシュ・署名・証明のどれかが必ず合わなくなり、go がそのダウンロードを捨てる、という意味です。つまり**差し替えた中身を使わせることができない**仕組みです。
+
+逆に、この仕組みでは守れないものもあります。
+
+- go.sum そのものの書き換え: go.sum に行があると checksum database には問い合わせません。偽のハッシュに書き換えた go.sum がリポジトリに入ると、go はそちらを正解として扱います。go.sum の差分はコードと同じくレビューの対象です
+- 最初から悪意のある中身: checksum database が保証するのは「同じバージョンの中身が、誰がいつ取っても変わらない」ことだけです。最初に記録された中身が安全かどうかは保証しません
+- 初めから偽の台帳だけを見せられた場合: 枝分かれに気付けるのは、正しい台帳の tree head を一度でも見ているときです。最初から偽の台帳だけを見せられ続けると、手元の `latest` だけでは気付けません。これを見つけるには、第三者が各地の tree head を突き合わせる必要があります（Certificate Transparency の監視と同じ考え方です）
+- (b) をスキップするモジュール: `GOPRIVATE` / `GONOSUMDB` の対象や `GOSUMDB=off` では、最初の取得時に照合する相手がありません
+
 ### ステップ6: go.sum に記録する
 
-検証を通ったハッシュを `go.sum` に追記し、モジュールパスとバージョンの順にソートして書き出します。書き込みタイミングは「解決が完了して `go.mod` を更新するとき」で、`-mod=readonly`（Go 1.16 以降のデフォルト）だと勝手には書かず、代わりにエラーで `go mod tidy` を促します。
+- 検証を通ったハッシュを `go.sum` に追記し、モジュールパスとバージョンの順にソートして書き出します。
+- 書き込みタイミングは「解決が完了して `go.mod` を更新するとき」で、`-mod=readonly`（Go 1.16 以降のデフォルト）だと勝手には書かず、代わりにエラーで `go mod tidy` を促します。
 
 記録される行数にはルールがあります。
 
@@ -1184,13 +1311,17 @@ github.com/go-chi/chi/v5 v5.3.2 h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
 github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto=
 ```
 
-ステップ1 で取得された `github.com/go-chi/chi v1.5.5` は、**1 行も載っていません**。キャッシュには zip も展開済みツリーも残っているのに、です。理由は、あれが import path 解決のための「探り」であって、最終的なモジュールグラフの一員ではないからです。
+ステップ1 で取得された github.com/go-chi/chi v1.5.5 は、zip の取得・展開に加え checksum database での検証まで済んでいます。それでも go.sum には 1 行も載っていません。理由は、あれが import path 解決のための「探り」であって、最終的なモジュールグラフの一員ではないからです。
 
 ```txt
 モジュールキャッシュ ⊃ go.sum
 ```
+モジュールキャッシュ ⊃ go.sum は、「キャッシュに入っているモジュール集合」が「go.sum に書かれたモジュール集合」を含む、という意味です。ただし比べているのは中身の種類が違うもの同士（ファイル実体とハッシュ行）なので、厳密な集合の包含ではなく比喩として読む。
 
 キャッシュは「見に行ったもの全部」、`go.sum` は「ビルドに関与するものだけ」という非対称があります。
+
+- 範囲: go.sum はプロジェクトごとのファイルで、そのモジュールグラフに入るものしか書きません。モジュールキャッシュはマシン全体で共有される 1 か所で、どのプロジェクトの go get で取ったものも、探りで取っただけのもの（v1.5.5 など）もすべて残ります
+- 役割: go.sum は「このハッシュでなければならない」という期待値の記録です。キャッシュは実物の置き場なので、go clean -modcache で消しても次のビルドで取り直せます
 
 ### 6 ステップの実体まとめ
 
