@@ -5,7 +5,7 @@
 > Go から同じ計算をするなら、`golang.org/x/mod/sumdb/dirhash` の 1 行で済みます。
 > 
 > ```go
-> dirhash.HashZip(".../v5.3.2.zip", dirhash.Hash1)
+> dirhash.HashZip("$(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.zip", dirhash.Hash1)
 > // h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=  → go.sum と一致
 > ```
 
