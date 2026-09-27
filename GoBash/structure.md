@@ -116,7 +116,7 @@ find GoBash/ex-npm/node_modules -type f | wc -l
      601
 ```
 
-※ `node_modules` は **65 ディレクトリ / 601 ファイル / 3.8M**（express 1個指定で 68 パッケージ）。
+※ `node_modules` は **65 ディレクトリ / 601 ファイル / 3.8MB**（express 1個指定で 68 パッケージ）。
 **「数万ファイル」とは言わない**。この構成では嘘になる。実測どおりに言う。
 
 #### Goは別のプロジェクトが、同じパッケージを読んでいる
@@ -176,7 +176,7 @@ go.mod             require github.com/go-chi/chi/v5 v5.3.2   → 幅を書かな
 ```
 
 - npm は「範囲の宣言（package.json）」と「結果の記録（lock）」の2枚で1組
-- Go の go.mod は最初からピンポイントで版を宣言する。結果の記録を別に持たなくてよい
+- Go の go.mod は最初からピンポイントでバージョンを宣言する。結果の記録を別に持たなくてよい
 - → では go.sum は何を記録しているのか？ がスライド4への橋
 
 ##### スライド本文（案・8行以内）
@@ -379,7 +379,7 @@ go.sum に無い初回      sum.golang.org に問い合わせて照合
 #### go.sum は lock ファイルか？
 
 - バージョンを決めるのは go.mod（ステップ2）
-- go.sum は、取ってきた中身が本物かを確かめる（ステップ4・5）
+- go.sum は、取ってきたモジュールが本物かを確かめる（ステップ4・5）
 - → go.sum はロックではなく、検証のための台帳
 
 ##### トーク（約20秒）
@@ -439,14 +439,14 @@ zsh: permission denied: .../chi/v5@v5.3.2/mux.go
 
 connpass のタイトルが「npm との対比」で公開済みなので**必ず入れる**。
 
-| | Go | npm | pnpm |
-| --- | --- | --- | --- |
-| 実体の場所 | `$GOMODCACHE` マシンで1つ | `node_modules` にプロジェクトごと展開 | グローバルストア + ハードリンク |
-| 同一バージョンの重複 | 無い | プロジェクト数だけコピー | 無い |
-| 実測（本サンプル） | 依存1 / 86ファイル / 588K（**外**） | 依存68 / 601ファイル / 3.8M（**内**） | - |
-| 版の宣言 | go.mod にピンポイント（最低版） | package.json に範囲 + lock に結果 | 同左 |
-| 書き込み | 読み取り専用 | 書き換え可能 | ストアは共有 |
-| git 管理 | go.mod / go.sum だけ | 原則 `.gitignore` | 同左 |
+| | Go | npm |
+| --- | --- | --- |
+| 実体の場所 | `$GOMODCACHE` マシンで1つ | `node_modules` にプロジェクトごと展開 |
+| 同一バージョンの重複 | 無い | プロジェクト数だけコピー |
+| 実測（本サンプル） | 依存1 / 86ファイル / 588KB（**外**） | 依存68 / 601ファイル / 3.8MB（**内**） |
+| 版の宣言 | go.mod にピンポイント（最低版） | package.json に範囲 + lock に結果 |
+| 書き込み | 読み取り専用 | 書き換え可能 |
+| git 管理 | go.mod / go.sum だけ | 原則 `.gitignore` |
 
 ##### トーク（約40秒）
 
@@ -495,11 +495,11 @@ connpass のタイトルが「npm との対比」で公開済みなので**必�
 - **ターミナル出力は8行まで**。38F の部屋、40人規模。後列から読めるのは8行が限界
   - `.info` の JSON、sumdb の lookup 出力（7行＋署名）はそのままだと読めない → 該当行だけ抜いて拡大
   - go.sum の2行 と `-r--r--r--` の1行は、それぞれ1枚使う価値がある
-- **`ls ex-Go` を出す前にビルド済みバイナリ `ex-Go/ex-Go`（7.9M）を消す**。
+- **`ls ex-Go` を出す前にビルド済みバイナリ `ex-Go/ex-Go`（7.9MB）を消す**。
   `go build` の産物が `ls` に混ざると、3ファイルの絵が濁る。
   `question.md` / `README.md` も調査メモなので、スライドでは
   `main.go` / `go.mod` / `go.sum` の3行だけ抜いて見せる
-- **`go clean -modcache` のライブ実行はしない**。166M の再取得が走る。キャプチャで
+- **`go clean -modcache` のライブ実行はしない**。166MB の再取得が走る。キャプチャで
 - ネットワーク依存のコマンド（`go get` / `curl proxy.golang.org`）も事前キャプチャ
 - ライブでやる価値があるのは `ls` の2枚並べだけ
 
@@ -513,3 +513,46 @@ Day 5  ターミナル出力の投影チェック（8行・フォントサイズ
 Day 6  通し。10分に収まらなければ「前提」パート（スライド3）から削る
 Day 7  予備 / ブログ下書き（疑問3・6・10 の深掘りをここへ）
 ```
+
+---
+
+
+# 用語一覧
+
+## モジュールキャッシュ
+go env GOMODCACHE が指すディレクトリ
+
+## モジュールグラフ
+
+どのモジュールのどのバージョンが、どのモジュールのどのバージョンを require しているか」を表す有向グラフ
+
+```bash
+go mod graph
+github.com/takumashiraki/conference-report/GoBash/ex-Go github.com/go-chi/chi/v5@v5.3.2
+github.com/takumashiraki/conference-report/GoBash/ex-Go go@1.26.8
+github.com/go-chi/chi/v5@v5.3.2 go@1.23
+go@1.26.8 toolchain@go1.26.8
+```
+
+## package と module
+
+正しい呼び名はツールごとに違います。**Go で配布・バージョン管理・キャッシュされる単位は「モジュール」、npm で同じ役割を持つ単位は「パッケージ」**です。同じ「パッケージ」という語でも、Go と npm では指すものが違います。
+
+||Go|npm|
+|---|---|---|
+|バージョンを付けて配布・取得される単位|**module**（go.mod があるもの）|**package**（package.json があるもの）|
+|コードを読み込む単位|**package**（同じディレクトリにあり、まとめてコンパイルされる .go ファイル群）|**module**（require / import で読み込めるファイルやディレクトリ）|
+
+公式ドキュメントの定義（今回 WebFetch で取得して確認）:
+
+- Go（[https://go.dev/ref/mod](https://go.dev/ref/mod) ）
+    - "A module is a collection of packages that are released, versioned, and distributed together."
+    - "A package is a collection of source files in the same directory that are compiled together."
+    - モジュールキャッシュは `module@version` の形でモジュールを保存する
+- npm（[https://docs.npmjs.com/about-packages-and-modules](https://docs.npmjs.com/about-packages-and-modules) ）
+    - package は "A file or directory that is described by a `package.json` file."
+    - module は "Any file or directory in the `node_modules` directory that can be loaded by ... `require()` or `import`"
+    - "Not all modules are packages."
+
+このため、比較するときは **Go の module と npm の package を対応させる**のが正確です。
+
