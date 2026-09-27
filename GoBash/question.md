@@ -516,10 +516,15 @@ import (
 
 ビルドリストは、`go.mod` から決まる「ビルドに使うモジュールとバージョンの一覧」です（決め方は (b) の MVS）。`go list -m all` で確認できます。
 
+image url
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=503&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2524%2520go%2520list%2520-m%2520all%250A%2523%2520%25E2%2586%2593%2520%25E3%2583%25A1%25E3%2582%25A4%25E3%2583%25B3%25E3%2583%25A2%25E3%2582%25B8%25E3%2583%25A5%25E3%2583%25BC%25E3%2583%25AB%250Agithub.com%252Ftakumashiraki%252Fconference-report%252FGoBash%252Fex-Go%250A%2523%2520%25E2%2586%2593%2520%25E4%25BE%259D%25E5%25AD%2598%25E3%2583%25A2%25E3%2582%25B8%25E3%2583%25A5%25E3%2583%25BC%25E3%2583%25AB%25EF%25BC%2588%25E3%2583%25A2%25E3%2582%25B8%25E3%2583%25A5%25E3%2583%25BC%25E3%2583%25AB%25E3%2583%2591%25E3%2582%25B9%2520%25E3%2583%2590%25E3%2583%25BC%25E3%2582%25B8%25E3%2583%25A7%25E3%2583%25B3%25EF%25BC%2589%250Agithub.com%252Fgo-chi%252Fchi%252Fv5%2520v5.3.2 -->
+
 ```bash
-go list -m all
-github.com/takumashiraki/conference-report/GoBash/ex-Go # ← メインモジュール（バージョンなし）
-github.com/go-chi/chi/v5 v5.3.2                          # ← 依存モジュール（モジュールパス バージョン）
+$ go list -m all
+# ↓ メインモジュール
+github.com/takumashiraki/conference-report/GoBash/ex-Go
+# ↓ 依存モジュール（モジュールパス バージョン）
+github.com/go-chi/chi/v5 v5.3.2
 ```
 
 go コマンドはまず、ビルドリストの中から、モジュールパス（左列）が import path の接頭辞になっているモジュールを探します。
@@ -552,12 +557,17 @@ github.com                 の最新バージョン
 
 モジュールキャッシュが空の状態で `go get -x` を実行すると、go コマンドが実際にプロキシへ送った要求が見えます。最新バージョンを知るために叩いているのは `@v/list`（バージョン一覧）で、バージョンが返ってくる（要求に成功する）のは 2 つでした。
 
+image url
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=638&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2524%2520go%2520get%2520-x%2520github.com%252Fgo-chi%252Fchi%252Fv5%25202%253E%25261%2520%257C%2520grep%2520-E%2520%27%252F%2540v%252Flist%253A%2520%257Cgo%253A%2520downloading%27%250A%2523%2520get%2520https%253A%252F%252Fproxy.golang.org%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%252F%2540v%252Flist%253A%2520200%2520OK%250A%2523%2520get%2520https%253A%252F%252Fproxy.golang.org%252Fgithub.com%252Fgo-chi%252Fchi%252F%2540v%252Flist%253A%2520200%2520OK%250A%2523%2520get%2520https%253A%252F%252Fproxy.golang.org%252Fgithub.com%252Fgo-chi%252F%2540v%252Flist%253A%2520404%2520Not%2520Found%250A%2523%2520get%2520https%253A%252F%252Fproxy.golang.org%252Fgithub.com%252F%2540v%252Flist%253A%2520404%2520Not%2520Found%250Ago%253A%2520downloading%2520github.com%252Fgo-chi%252Fchi%252Fv5%2520v5.3.2%250Ago%253A%2520downloading%2520github.com%252Fgo-chi%252Fchi%2520v1.5.5 -->
+
 ```bash
-go get -x github.com/go-chi/chi/v5 2>&1 | grep '/@v/list: '
-# get https://proxy.golang.org/github.com/@v/list: 404 Not Found
+$ go get -x github.com/go-chi/chi/v5 2>&1 | grep -E '/@v/list: |go: downloading'
 # get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/list: 200 OK
-# get https://proxy.golang.org/github.com/go-chi/@v/list: 404 Not Found
 # get https://proxy.golang.org/github.com/go-chi/chi/@v/list: 200 OK
+# get https://proxy.golang.org/github.com/go-chi/@v/list: 404 Not Found
+# get https://proxy.golang.org/github.com/@v/list: 404 Not Found
+go: downloading github.com/go-chi/chi/v5 v5.3.2
+go: downloading github.com/go-chi/chi v1.5.5
 ```
 
 （行末の所要時間は省略しています。4 つの要求は並列に送られるので、並び順は実行するたびに変わります。）
@@ -595,13 +605,21 @@ MVS を行うために、go コマンドは依存モジュールの複数のバ�
 
 デフォルトの設定はこうなっています。
 
+image url
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=300&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2524%2520go%2520env%2520GOPROXY%250Ahttps%253A%252F%252Fproxy.golang.org%252Cdirect -->
+
 ```sh
 go env GOPROXY
 https://proxy.golang.org,direct
+```
 
-# https://proxy.golang.org モジュールのキャッシュサーバー
-# , フォールバックのチェーン (「1 番目で取れなければ 2 番目を試す」という順番付きの候補リスト)
-# direct は「プロキシ(https://proxy.golang.org)を使わず直接 VCS(Git) を叩く」という特殊な値で、プロキシが 404 / 410 を返したら次に進みます。
+用語
+- https://proxy.golang.org
+  - モジュールのキャッシュサーバー
+- `,`
+  - フォールバックのチェーン (「1 番目で取れなければ 2 番目を試す」という順番付きの候補リスト)
+- `direct`
+  - 「プロキシ(https://proxy.golang.org)を使わず直接 VCS(Git) を叩く」という特殊な値で、プロキシが 404 / 410 を返したら次に進みます。
 ```
 
 |場面|経路|例|
@@ -629,37 +647,60 @@ GitHub などから取ってきたソースを zip にして保存しておき�
 
 作者がアップロードする npm registry とは違い、初めて要求されたバージョンはプロキシ自身が元リポジトリから取ってきます。いったんキャッシュされると、作者が元リポジトリでリリースを消しても取得でき続けます（[proxy.golang.org](https://proxy.golang.org/) の FAQ）。
 
+
+![](./../Untitled-1.svg)
+
+```mermaid
+sequenceDiagram
+    participant C as go コマンド
+    participant P as proxy.golang.org
+    participant O as 元リポジトリ<br/>(github.com/go-chi/chi)
+
+    Note over C,O: 初回（そのバージョンがキャッシュにない）
+    C->>P: GET v5.3.2 の .info / .mod / .zip
+    P->>O: git でタグを取得
+    O-->>P: ソース
+    Note over P: zip にして保存
+    P-->>C: .info / .mod / .zip
+
+    Note over C,O: 2 回目以降（キャッシュ済み）
+    C->>P: GET v5.3.2 の .info / .mod / .zip
+    P-->>C: 保存済みの .info / .mod / .zip
+```
+
 プロキシへのリクエストは、この 5 種類の HTTP GET だけです。
 
 ```txt
 GET /<module>/@v/list              バージョン一覧
 GET /<module>/@v/<version>.info    メタデータ (JSON)
 GET /<module>/@v/<version>.mod     そのバージョンの go.mod
-GET /<module>/@v/<version>.zip     ソースアーカイブ (zip)
+GET /<module>/@v/<version>.zip     モジュール zip ファイル (zip)
 GET /<module>/@latest              最新版の解決（タグ付きバージョンが無いときだけ使う）
 ```
 
-バージョン無指定の `go get` だと、まず `@v/list` でバージョン一覧を取り、その中で最も高いリリースについて `.info` → `.mod` → `.zip` の順に叩きます。`.mod` と `.zip` の間には `sum.golang.org` へのチェックサム照合が挟まります。
+バージョン無指定の `go get` だと、まず `@v/list` でバージョン一覧を取り、その中で SemVer（Semantic Versioning） が最大のバージョン(プレリリースを除いて) `.info` → `.mod` → `.zip` の順に叩きます。`.mod` と `.zip` の間には `sum.golang.org` へのチェックサム照合が挟まります。
 
 空のモジュール・空のキャッシュで実行し、`chi/v5` の取得に関わる行だけを残して URL を縮めた出力です。
 
-```txt
-❯ cd "$(mktemp -d)" && go mod init demo
-❯ GOMODCACHE=$(mktemp -d) GOFLAGS=-modcacherw go get -x github.com/go-chi/chi/v5 2>&1
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=925&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2524%2520GOMODCACHE%253D%2524%28mktemp%2520-d%29%2520GOFLAGS%253D-modcacherw%2520go%2520get%2520-x%2520github.com%252Fgo-chi%252Fchi%252Fv5%25202%253E%25261%250A%2523%2520get%2520https%253A%252F%252Fproxy.golang.org%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%252F%2540v%252Flist%2520200%2520OK%2520%2520%2520%2520%2520%2520%2520%2520%25E2%2586%2590%2520%2540v%252Flist%2520%25E3%2581%25A7%25E3%2583%2590%25E3%2583%25BC%25E3%2582%25B8%25E3%2583%25A7%25E3%2583%25B3%25E4%25B8%2580%25E8%25A6%25A7%25E5%258F%2596%25E5%25BE%2597%250A%2523%2520get%2520https%253A%252F%252Fproxy.golang.org%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%252F%2540v%252Fv5.3.2.info%2520200%2520OK%2520%25E2%2586%2590%2520%25E6%259C%2580%25E5%25A4%25A7%25E3%2581%25AE%25E3%2583%2590%25E3%2583%25BC%25E3%2582%25B8%25E3%2583%25A7%25E3%2583%25B3%25E3%2581%25AE%25E3%2583%25A1%25E3%2582%25BF%25E3%2583%2587%25E3%2583%25BC%25E3%2582%25BF%250A%2523%2520get%2520https%253A%252F%252Fproxy.golang.org%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%252F%2540v%252Fv5.3.2.mod%2520200%2520OK%2520%2520%25E2%2586%2590%2520v5.3.2%2520%25E3%2581%25AEgo.mod%2520%25E3%2582%2592%25E5%258F%2596%25E5%25BE%2597%250A%2523%2520get%2520https%253A%252F%252Fsum.golang.org%252Flookup%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%2540v5.3.2%2520200%2520OK%2520%2520%2520%2520%25E2%2586%2590%2520%25E7%2585%25A7%25E5%2590%2588%25E7%2594%25A8%25E3%2583%258F%25E3%2583%2583%25E3%2582%25B7%25E3%2583%25A5%25E3%2582%2592%25E5%258F%2596%25E5%25BE%2597%250Ago%253A%2520downloading%2520github.com%252Fgo-chi%252Fchi%252Fv5%2520v5.3.2%250A%2523%2520get%2520https%253A%252F%252Fproxy.golang.org%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%252F%2540v%252Fv5.3.2.zip%2520200%2520OK%2520%2520%25E2%2586%2590%2520%25E3%2583%25A2%25E3%2582%25B8%25E3%2583%25A5%25E3%2583%25BC%25E3%2583%25AB%2520zip%2520%25E3%2583%2595%25E3%2582%25A1%25E3%2582%25A4%25E3%2583%25AB%250Ago%253A%2520added%2520github.com%252Fgo-chi%252Fchi%252Fv5%2520v5.3.2 -->
 
-# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/list 200 OK        ← ① バージョン一覧
-# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/v5.3.2.info 200 OK ← ② 最も高いリリースのメタデータ
-# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/v5.3.2.mod 200 OK  ← ③ go.mod
-# get https://sum.golang.org/lookup/github.com/go-chi/chi/v5@v5.3.2 200 OK    ← ④ チェックサム照合
+```bash
+$ GOMODCACHE=$(mktemp -d) GOFLAGS=-modcacherw go get -x github.com/go-chi/chi/v5 2>&1
+# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/list 200 OK        ← @v/list でバージョン一覧取得
+# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/v5.3.2.info 200 OK ← 最大のバージョンのメタデータ
+# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/v5.3.2.mod 200 OK  ← v5.3.2 のgo.mod を取得
+# get https://sum.golang.org/lookup/github.com/go-chi/chi/v5@v5.3.2 200 OK    ← 照合用ハッシュを取得
 go: downloading github.com/go-chi/chi/v5 v5.3.2
-# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/v5.3.2.zip              200 OK  ← ⑤ ソースアーカイブ
+# get https://proxy.golang.org/github.com/go-chi/chi/v5/@v/v5.3.2.zip 200 OK  ← モジュール zip ファイル
 go: added github.com/go-chi/chi/v5 v5.3.2
 ```
 
 ① の一覧の末尾はこうなっていて、最も高い `v5.3.2` が選ばれます。
 
-```txt
-❯ curl -s https://proxy.golang.org/github.com/go-chi/chi/v5/@v/list | sort -V | tail -3
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=772&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2524%2520curl%2520-s%2520https%253A%252F%252Fproxy.golang.org%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%252F%2540v%252Flist%2520%257C%2520sort%2520-V%2520%257C%2520tail%2520-3%250Av5.3.0%250Av5.3.1%250Av5.3.2 -->
+
+```bash
+$ curl -s https://proxy.golang.org/github.com/go-chi/chi/v5/@v/list | sort -V | tail -3
 v5.3.0
 v5.3.1
 v5.3.2
@@ -752,7 +793,10 @@ go env GOMODCACHE
 
 この直下に、役割の違う 2 つの置き場が同じ階層で並んでいます。
 
-```txt
+image url
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=690&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%7E%252Fgo%252Fpkg%252Fmod%252F%250A%25E2%2594%259C%25E2%2594%2580%25E2%2594%2580%2520cache%252F%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%25E2%2586%2590%2520%25E5%25B1%25A41%253A%2520%25E5%258F%2596%25E5%25BE%2597%25E3%2581%2597%25E3%2581%259F%25E3%2582%2582%25E3%2581%25AE%25E3%2582%2592%25E3%2581%259D%25E3%2581%25AE%25E3%2581%25BE%25E3%2581%25BE%25E7%25BD%25AE%25E3%2581%258F%250A%25E2%2594%2582%2520%2520%2520%25E2%2594%259C%25E2%2594%2580%25E2%2594%2580%2520download%252F%250A%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%259C%25E2%2594%2580%25E2%2594%2580%2520github.com%252Fgo-chi%252Fchi%252Fv5%252F%2540v%252F%250A%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%259C%25E2%2594%2580%25E2%2594%2580%2520list%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%25E2%2586%2590%2520%2520%2520%25E6%2589%258B%25E5%2585%2583%25E3%2581%25AB%25E3%2581%2582%25E3%2582%258B%25E3%2583%2590%25E3%2583%25BC%25E3%2582%25B8%25E3%2583%25A7%25E3%2583%25B3%25E3%2581%25AE%25E4%25B8%2580%25E8%25A6%25A7%250A%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%259C%25E2%2594%2580%25E2%2594%2580%2520v5.3.2.info%2520%2520%2520%2520%2520%2520%2520%2520%2520%25E2%2586%2590%2520%2520%2520%25E3%2583%2590%25E3%2583%25BC%25E3%2582%25B8%25E3%2583%25A7%25E3%2583%25B3%25E3%2581%25A8%25E5%258F%2596%25E5%25BE%2597%25E5%2585%2583%25EF%25BC%2588git%2520%25E3%2581%25AE%25E3%2582%25B3%25E3%2583%259F%25E3%2583%2583%25E3%2583%2588%25EF%25BC%2589%250A%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%259C%25E2%2594%2580%25E2%2594%2580%2520v5.3.2.mod%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%25E2%2586%2590%2520%2520%2520go.mod%2520%25E5%258D%2598%25E4%25BD%2593%250A%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%259C%25E2%2594%2580%25E2%2594%2580%2520v5.3.2.zip%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%25E2%2586%2590%2520%2520%2520%25E3%2582%25BD%25E3%2583%25BC%25E3%2582%25B9%25E3%2582%25A2%25E3%2583%25BC%25E3%2582%25AB%25E3%2582%25A4%25E3%2583%2596%25EF%25BC%2588%25E3%2582%25BD%25E3%2583%25BC%25E3%2582%25B9%25E4%25B8%2580%25E5%25BC%258F%25E3%2581%25AE%2520zip%25EF%25BC%2589%250A%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%259C%25E2%2594%2580%25E2%2594%2580%2520v5.3.2.ziphash%2520%2520%2520%2520%2520%2520%25E2%2586%2590%2520%2520%2520zip%2520%25E3%2581%25AE%25E3%2583%258F%25E3%2583%2583%25E3%2582%25B7%25E3%2583%25A5%25EF%25BC%2588go.sum%2520%25E3%2581%25A8%25E5%2590%258C%25E3%2581%2598%25E5%2580%25A4%25EF%25BC%2589%250A%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%2594%25E2%2594%2580%25E2%2594%2580%2520v5.3.2.lock%250A%25E2%2594%2582%2520%2520%2520%25E2%2594%2582%2520%2520%2520%25E2%2594%2594%25E2%2594%2580%25E2%2594%2580%2520sumdb%252F%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%25E2%2586%2590%2520%2520%2520%25E3%2583%2581%25E3%2582%25A7%25E3%2583%2583%25E3%2582%25AF%25E3%2582%25B5%25E3%2583%25A0%2520DB%2520%25E3%2581%25AE%25E5%25BF%259C%25E7%25AD%2594%25EF%25BC%2588%25E3%2582%25B9%25E3%2583%2586%25E3%2583%2583%25E3%2583%25975%25EF%25BC%2589%250A%25E2%2594%2582%2520%2520%2520%25E2%2594%2594%25E2%2594%2580%25E2%2594%2580%2520vcs%252F%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%25E2%2586%2590%2520%2520%2520direct%2520%25E5%258F%2596%25E5%25BE%2597%25E6%2599%2582%25E3%2581%25AE%2520git%2520%25E3%2583%25AA%25E3%2583%259D%25E3%2582%25B8%25E3%2583%2588%25E3%2583%25AA%25EF%25BC%2588%25E3%2582%25B9%25E3%2583%2586%25E3%2583%2583%25E3%2583%25972%25EF%25BC%2589%250A%25E2%2594%2582%250A%25E2%2594%2594%25E2%2594%2580%25E2%2594%2580%2520github.com%252Fgo-chi%252Fchi%252F%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%25E2%2586%2590%2520%25E5%25B1%25A42%253A%2520zip%2520%25E3%2582%2592%25E5%25B1%2595%25E9%2596%258B%25E3%2581%2597%25E3%2581%259F%25E3%2582%25BD%25E3%2583%25BC%25E3%2582%25B9%25EF%25BC%2588%25E3%2583%2593%25E3%2583%25AB%25E3%2583%2589%25E3%2581%258C%25E8%25AA%25AD%25E3%2582%2580%25EF%25BC%2589%250A%2520%2520%2520%2520%25E2%2594%259C%25E2%2594%2580%25E2%2594%2580%2520v5%2540v5.2.5%252F%250A%2520%2520%2520%2520%25E2%2594%259C%25E2%2594%2580%25E2%2594%2580%2520v5%2540v5.3.1%252F%250A%2520%2520%2520%2520%25E2%2594%2594%25E2%2594%2580%25E2%2594%2580%2520v5%2540v5.3.2%252F%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%25E2%2586%2590%2520%2520%2520chi.go%252C%2520mux.go%252C%2520go.mod%2520... -->
+
+```bash
 ~/go/pkg/mod/
 ├── cache/                          ← 層1: 取得したものをそのまま置く
 │   ├── download/
@@ -760,7 +804,7 @@ go env GOMODCACHE
 │   │   │   ├── list                ←   手元にあるバージョンの一覧
 │   │   │   ├── v5.3.2.info         ←   バージョンと取得元（git のコミット）
 │   │   │   ├── v5.3.2.mod          ←   go.mod 単体
-│   │   │   ├── v5.3.2.zip          ←   ソースアーカイブ（ソース一式の zip）
+│   │   │   ├── v5.3.2.zip          ←   モジュール zip ファイル（そのバージョンのファイルを丸ごとまとめた zip）
 │   │   │   ├── v5.3.2.ziphash      ←   zip のハッシュ（go.sum と同じ値）
 │   │   │   └── v5.3.2.lock
 │   │   └── sumdb/                  ←   チェックサム DB の応答（ステップ5）
@@ -842,7 +886,7 @@ h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
 |---|---|
 | `.info` | バージョンと取得元のメタデータ |
 | `.mod` | そのバージョンの `go.mod` 単体 |
-| `.zip` | ソースアーカイブ。そのバージョンのソース一式を 1 つにまとめた zip |
+| `.zip` | モジュール zip ファイル。そのバージョンのモジュールに含まれるファイル（.go のほか README や LICENSE も）を 1 つにまとめた zip |
 | `.ziphash` | 検証済みハッシュのキャッシュ（ステップ5で効く） |
 | `.lock` | 並行する `go` プロセス同士の排他用（0 バイト） |
 
@@ -922,31 +966,63 @@ dr-xr-xr-x@ 24 ... github.com/go-chi/chi/v5@v5.3.2
 
 `h1:` は、SHA-256 を使うハッシュ方式「Hash1」の識別子です。`golang.org/x/mod/sumdb/dirhash` のソースにも `Hash1 is the "h1:" directory hash function, using SHA-256.` とあります。値の先頭に方式名を書いておくことで、将来別の方式が増えても接頭辞で区別できます。
 
-ハッシュをかける対象は**ソースアーカイブ**です。ソースアーカイブとは、ステップ3 で層1に保存した `v5.3.2.zip` のことで、そのバージョンのソース一式（chi v5.3.2 なら 86 ファイル）を 1 つにまとめた zip ファイルです。
+ハッシュをかける対象は**モジュール zip ファイル**です。モジュール zip ファイルとは、ステップ3 で層1に保存した `v5.3.2.zip` のことで、そのバージョンのモジュールに含まれる全ファイル（chi v5.3.2 なら README や LICENSE も含めて 86 ファイル）を 1 つにまとめた zip ファイルです。
 
 中身で大事なのは、**zip のバイト列の SHA-256 ではない**という点です。手順は次の 4 段です。
 
 ```txt
-1. ソースアーカイブ内の全ファイルについて sha256 を計算する
+1. モジュール zip ファイル内の全ファイルについて sha256 を計算する
 2. "<sha256 の hex>  <ファイル名>\n" という行を作る（スペースは 2 個）
 3. ファイル名でソートして全行を連結する → これが「リスト」
 4. そのリスト全体の sha256 を取り、その 32 バイトを base64 して "h1:" を付ける
 ```
 
-#### 手順どおりに計算してみる
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=947&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2524%2520cd%2520%2524%28mktemp%2520-d%29%250A%2524%2520unzip%2520-q%2520%2524%28go%2520env%2520GOMODCACHE%29%252Fcache%252Fdownload%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%252F%2540v%252Fv5.3.2.zip%250A%2524%2520find%2520github.com%2520-type%2520f%2520%257C%2520LC_ALL%253DC%2520sort%2520%257C%2520%2520%2523%2520%25E6%2589%258B%25E9%25A0%25863%253A%2520%25E3%2583%2595%25E3%2582%25A1%25E3%2582%25A4%25E3%2583%25AB%25E5%2590%258D%25E3%2581%25A7%25E3%2582%25BD%25E3%2583%25BC%25E3%2583%2588%250A%2520%2520%2520%2520xargs%2520shasum%2520-a%2520256%2520%257C%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2523%2520%25E6%2589%258B%25E9%25A0%25861%25E3%2580%259C3%253A%2520%25E5%2590%2584%25E3%2583%2595%25E3%2582%25A1%25E3%2582%25A4%25E3%2583%25AB%25E3%2581%25AE%2520sha256%2520%25E3%2582%2592%25E3%2580%258C%253Chex%253E%2520%2520%253C%25E3%2583%2595%25E3%2582%25A1%25E3%2582%25A4%25E3%2583%25AB%25E5%2590%258D%253E%25E3%2580%258D%25E3%2581%25AE%25E8%25A1%258C%25E3%2581%25AB%25E3%2581%2597%25E3%2581%25A6%25E9%2580%25A3%25E7%25B5%2590%250A%2520%2520%2520%2520shasum%2520-a%2520256%2520%257C%2520cut%2520-d%27%2520%27%2520-f1%2520%257C%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2523%2520%25E6%2589%258B%25E9%25A0%25864%253A%2520%25E3%2583%25AA%25E3%2582%25B9%25E3%2583%2588%25E5%2585%25A8%25E4%25BD%2593%25E3%2581%25AE%2520sha256%250A%2520%2520%2520%2520xxd%2520-r%2520-p%2520%257C%2520base64%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2520%2523%2520%25E6%2589%258B%25E9%25A0%25864%253A%2520hex%2520%25E3%2582%2592%252032%2520%25E3%2583%2590%25E3%2582%25A4%25E3%2583%2588%25E3%2581%25AB%25E6%2588%25BB%25E3%2581%2597%25E3%2581%25A6%2520base64%250A5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY%253D%250A%2523%2520%25E5%2585%2588%25E9%25A0%25AD%25E3%2581%25AB%2520h1%253A%2520%25E3%2582%2592%25E4%25BB%2598%25E3%2581%2591%25E3%2582%258B%25E3%2581%25A8%2520go.sum%2520%25E3%2581%25AE%25201%2520%25E8%25A1%258C%25E7%259B%25AE%25E3%2581%25A8%25E4%25B8%2580%25E8%2587%25B4 -->
 
-chi v5.3.2 のソースアーカイブを使い、4 段を 1 つずつシェルで再現します。
+```bash
+$ cd $(mktemp -d)
+$ unzip -q $(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.zip
+$ find github.com -type f | LC_ALL=C sort |  # 手順3: ファイル名でソート
+    xargs shasum -a 256 |                    # 手順1〜3: 各ファイルの sha256 を「<hex>  <ファイル名>」の行にして連結
+    shasum -a 256 | cut -d' ' -f1 |          # 手順4: リスト全体の sha256
+    xxd -r -p | base64                       # 手順4: hex を 32 バイトに戻して base64
+5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
+# 先頭に h1: を付けると go.sum の 1 行目と一致
+```
 
-**1. ソースアーカイブ内の全ファイルについて sha256 を計算する**
+#### 1 コマンドで計算する（スライド用）
+
+4 段は 1 本のパイプでつながります。スライドではこの 1 枚で説明し、各段の中身は次の「手順どおりに計算してみる」を補足として使います。
 
 ```sh
-cd $(mktemp -d)
-unzip -q $(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.zip
-find github.com -type f | wc -l
+$ cd $(mktemp -d)
+$ unzip -q $(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.zip
+$ find github.com -type f | LC_ALL=C sort |  # 手順3: ファイル名でソート
+    xargs shasum -a 256 |                    # 手順1〜3: 各ファイルの sha256 を「<hex>  <ファイル名>」の行にして連結
+    shasum -a 256 | cut -d' ' -f1 |          # 手順4: リスト全体の sha256
+    xxd -r -p | base64                       # 手順4: hex を 32 バイトに戻して base64
+5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
+# 先頭に h1: を付けると go.sum の 1 行目と一致
+```
+
+パイプの順番と手順の番号がずれるのは、ソートを先に済ませてから `shasum` を回すためです。`xargs shasum` はソート済みの順に 1 ファイル 1 行を出力するので、その出力がそのまま「リスト」になります。
+
+#### 手順どおりに計算してみる
+
+chi v5.3.2 のモジュール zip ファイルを使い、4 段を 1 つずつシェルで再現します。
+
+**1. モジュール zip ファイル内の全ファイルについて sha256 を計算する**
+
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=949&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2524%2520cd%2520%2524%28mktemp%2520-d%29%250A%2524%2520unzip%2520-q%2520%2524%28go%2520env%2520GOMODCACHE%29%252Fcache%252Fdownload%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%252F%2540v%252Fv5.3.2.zip%250A%2524%2520find%2520github.com%2520-type%2520f%2520%257C%2520wc%2520-l%250A%2520%2520%2520%2520%2520%252086%250A%2523%2520%25E3%2583%2595%25E3%2582%25A1%25E3%2582%25A4%25E3%2583%25AB%25E6%2595%25B0%252086%2520%25E5%2580%258B%250A%250A%2524%2520shasum%2520-a%2520256%2520github.com%252Fgo-chi%252Fchi%252Fv5%2540v5.3.2%252F.gitignore%250A785f18e2ac99c66b81d8d185aa1a65cfe4f39b12bef24c1f8037d85840490929%2520%2520github.com%252Fgo-chi%252Fchi%252Fv5%2540v5.3.2%252F.gitignore%250A%2523%2520%25E2%2586%2591%2520%25E3%2581%2593%25E3%2582%258C%25E3%2581%258C%2520%2522%253Csha256%2520%25E3%2581%25AE%2520hex%253E%2520%2520%253C%25E3%2583%2595%25E3%2582%25A1%25E3%2582%25A4%25E3%2583%25AB%25E5%2590%258D%253E%255Cn%2522%2520%25E3%2581%25A8%25E3%2581%2584%25E3%2581%2586%25E8%25A1%258C%25E3%2581%25AB%25E3%2581%25AA%25E3%2582%258B -->
+
+```sh
+$ cd $(mktemp -d)
+$ unzip -q $(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v/v5.3.2.zip
+$ find github.com -type f | wc -l
       86
 # ファイル数 86 個
 
-shasum -a 256 github.com/go-chi/chi/v5@v5.3.2/.gitignore
+$ shasum -a 256 github.com/go-chi/chi/v5@v5.3.2/.gitignore
 785f18e2ac99c66b81d8d185aa1a65cfe4f39b12bef24c1f8037d85840490929  github.com/go-chi/chi/v5@v5.3.2/.gitignore
 # ↑ これが "<sha256 の hex>  <ファイル名>\n" という行になる
 ```
@@ -1081,7 +1157,7 @@ dirhash.HashZip(".../v5.3.2.zip", dirhash.Hash1)
 // h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=  → go.sum と一致
 ```
 
-`/go.mod` 行も同じ H1 ですが、対象はソースアーカイブではなく `v5.3.2.mod` 1 ファイルです。リストに書くファイル名は literal の `go.mod` です。
+`/go.mod` 行も同じ H1 ですが、対象はモジュール zip ファイルではなく `v5.3.2.mod` 1 ファイルです。リストに書くファイル名は literal の `go.mod` です。
 
 ```sh
 D=$(go env GOMODCACHE)/cache/download/github.com/go-chi/chi/v5/@v
@@ -1144,18 +1220,19 @@ go.sum database tree ← ここから下は署名付きツリーヘッド
 | `— sum.golang.org ...` | ed25519 署名（signed note 形式） |
 
 実際に GOSUMDB へ問い合わせた
+
 ```bash
-❯ curl https://sum.golang.org/lookup/github.com/go-chi/chi/v5@v5.3.2
+$ curl https://sum.golang.org/lookup/github.com/go-chi/chi/v5@v5.3.2
+60295460 # ← sumdb のログ上でこのレコードが何番目か
+github.com/go-chi/chi/v5 v5.3.2 h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY= # ← zip 内の全ファイルのハッシュ
+github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto= # ← go.mod のハッシュ
 
-60295460
-github.com/go-chi/chi/v5 v5.3.2 h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
-github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto=
+go.sum database tree # ← ここから下は署名付きツリーヘッド
+63096908 # ← 応答時点でのツリーのサイズ
+8lHrQPRYe4KT4WQ9/Qk8/taKnD6IRHbFgfN7vQE2Y54= # ← ツリーのルートハッシュ
 
-go.sum database tree
-65407379
-dK1AMX6HRs4Y7ySXO6fz9vRJ2jqAzUBCb6nT+9xX0Yw=
-
-— sum.golang.org Az3grhTyxGxrAVvP04jEuMx3rQ8zlVpC/zZ63hHNDrfY9pNqRZKJ3CmwtZRwo4/miSTqm/X9vWmsY33TVqukQA5V5gI=
+— sum.golang.org Az3gri/oVBN1jAhNZ/iS+W31psFAWRT20/GyrhpU6taFwulQGetBkH5S7wpGXdS935jiIGiUUAXBVHzT/P6fYhqAmAk=
+# ↑ sum.golang.org の署名
 ```
 
 重要なのは、**この署名の検証鍵が go コマンドのバイナリに埋め込まれている**ことです。だから `proxy.golang.org` を信用する必要がありません。プロキシ経由で checksum database の応答を中継してもらっても（`GET /sumdb/sum.golang.org/lookup/...`）、署名が合わなければ弾かれます。
@@ -1305,8 +1382,11 @@ go.sum database server misbehavior detected!
 
 そして今回のケースで一番面白いのはここです。
 
+image url
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=764&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2524%2520cat%2520go.sum%250Agithub.com%252Fgo-chi%252Fchi%252Fv5%2520v5.3.2%2520h1%253A5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY%253D%250Agithub.com%252Fgo-chi%252Fchi%252Fv5%2520v5.3.2%252Fgo.mod%2520h1%253AR%252BtYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto%253D -->
+
 ```sh
-cat go.sum
+$ cat go.sum
 github.com/go-chi/chi/v5 v5.3.2 h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
 github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto=
 ```
