@@ -1221,6 +1221,8 @@ go.sum database tree ← ここから下は署名付きツリーヘッド
 
 実際に GOSUMDB へ問い合わせた
 
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=680&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=true&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2524%2520curl%2520https%253A%252F%252Fsum.golang.org%252Flookup%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%2540v5.3.2%250A60295460%2520%2523%2520%25E2%2586%2590%2520sumdb%2520%25E3%2581%25AE%25E3%2583%25AD%25E3%2582%25B0%25E4%25B8%258A%25E3%2581%25A7%25E3%2581%2593%25E3%2581%25AE%25E3%2583%25AC%25E3%2582%25B3%25E3%2583%25BC%25E3%2583%2589%25E3%2581%258C%25E4%25BD%2595%25E7%2595%25AA%25E7%259B%25AE%25E3%2581%258B%250Agithub.com%252Fgo-chi%252Fchi%252Fv5%2520v5.3.2%2520h1%253A5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY%253D%2520%2523%2520%25E2%2586%2590%2520zip%2520%25E5%2586%2585%25E3%2581%25AE%25E5%2585%25A8%25E3%2583%2595%25E3%2582%25A1%25E3%2582%25A4%25E3%2583%25AB%25E3%2581%25AE%25E3%2583%258F%25E3%2583%2583%25E3%2582%25B7%25E3%2583%25A5%250Agithub.com%252Fgo-chi%252Fchi%252Fv5%2520v5.3.2%252Fgo.mod%2520h1%253AR%252BtYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto%253D%2520%2523%2520%25E2%2586%2590%2520go.mod%2520%25E3%2581%25AE%25E3%2583%258F%25E3%2583%2583%25E3%2582%25B7%25E3%2583%25A5%250A%250Ago.sum%2520database%2520tree%2520%2523%2520%25E2%2586%2590%2520%25E3%2581%2593%25E3%2581%2593%25E3%2581%258B%25E3%2582%2589%25E4%25B8%258B%25E3%2581%25AF%25E7%25BD%25B2%25E5%2590%258D%25E4%25BB%2598%25E3%2581%258D%25E3%2583%2584%25E3%2583%25AA%25E3%2583%25BC%25E3%2583%2598%25E3%2583%2583%25E3%2583%2589%250A63096908%2520%2523%2520%25E2%2586%2590%2520%25E5%25BF%259C%25E7%25AD%2594%25E6%2599%2582%25E7%2582%25B9%25E3%2581%25A7%25E3%2581%25AE%25E3%2583%2584%25E3%2583%25AA%25E3%2583%25BC%25E3%2581%25AE%25E3%2582%25B5%25E3%2582%25A4%25E3%2582%25BA%250A8lHrQPRYe4KT4WQ9%252FQk8%252FtaKnD6IRHbFgfN7vQE2Y54%253D%2520%2523%2520%25E2%2586%2590%2520%25E3%2583%2584%25E3%2583%25AA%25E3%2583%25BC%25E3%2581%25AE%25E3%2583%25AB%25E3%2583%25BC%25E3%2583%2588%25E3%2583%258F%25E3%2583%2583%25E3%2582%25B7%25E3%2583%25A5%250A%250A%25E2%2580%2594%2520sum.golang.org%2520Az3gri%252FoVBN1jAhNZ%252FiS%252BW31psFAWRT20%252FGyrhpU6taFwulQGetBkH5S7wpGXdS935jiIGiUUAXBVHzT%252FP6fYhqAmAk%253D%250A%2523%2520%25E2%2586%2591%2520sum.golang.org%2520%25E3%2581%25AE%25E7%25BD%25B2%25E5%2590%258D -->
+
 ```bash
 $ curl https://sum.golang.org/lookup/github.com/go-chi/chi/v5@v5.3.2
 60295460 # ← sumdb のログ上でこのレコードが何番目か
@@ -1377,8 +1379,8 @@ go.sum database server misbehavior detected!
 
 記録される行数にはルールがあります。
 
-- **ビルドに実際にソースが必要** → `h1:`（zip）と `/go.mod` の**2 行**
-- **モジュールグラフの構築にしか使わない** → `/go.mod` の**1 行**だけ
+- **ビルド時にソースが必要なモジュール**は、`h1:`（zip）と `/go.mod` の**2 行**
+- **モジュールグラフの構築にしか使わないモジュール**は、`/go.mod` の**1 行**だけ
 
 そして今回のケースで一番面白いのはここです。
 
@@ -1391,7 +1393,8 @@ github.com/go-chi/chi/v5 v5.3.2 h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
 github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto=
 ```
 
-ステップ1 で取得された github.com/go-chi/chi v1.5.5 は、zip の取得・展開に加え checksum database での検証まで済んでいます。それでも go.sum には 1 行も載っていません。理由は、あれが import path 解決のための「探り」であって、最終的なモジュールグラフの一員ではないからです。
+ステップ1 で取得された `github.com/go-chi/chi`（`/v5` なし）v1.5.5 は、zip の取得・展開に加え checksum database での検証まで済んでいます。それでも go.sum には 1 行も載っていません。go.sum の 2 行は、どちらも `github.com/go-chi/chi/v5` のものです。
+理由は、あれが import path 解決のための「探り」であって、最終的なモジュールグラフの一員ではないからです。
 
 ```txt
 モジュールキャッシュ ⊃ go.sum
