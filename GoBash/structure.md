@@ -68,25 +68,32 @@
 
 #### パッケージが入っているpathを調べる
 
-npmのimageファイル作成
-<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=680&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=true&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2523%2520%25E3%2582%25AD%25E3%2583%25A3%25E3%2583%2583%25E3%2582%25B7%25E3%2583%25A5%25E3%2581%25A8%25E3%2581%2597%25E3%2581%25A6%25E4%25BF%259D%25E5%25AD%2598%25E3%2581%2595%25E3%2582%258C%25E3%2582%258B%25E3%2583%2587%25E3%2582%25A3%25E3%2583%25AC%25E3%2582%25AF%25E3%2583%2588%25E3%2583%25AA%25E3%2581%25AE%25E3%2583%2591%25E3%2582%25B9%250Ago%2520env%2520GOMODCACHE%250A%252FUsers%252Fopm008296%252Fgo%252Fpkg%252Fmod%250A%250A%2523%2520%25E3%2583%2580%25E3%2582%25A6%25E3%2583%25B3%25E3%2583%25AD%25E3%2583%25BC%25E3%2583%2589%25E3%2581%2597%25E3%2581%259F%25E3%2583%2590%25E3%2583%25BC%25E3%2582%25B8%25E3%2583%25A7%25E3%2583%25B3%25E3%2581%25AE%25E3%2583%2591%25E3%2583%2583%25E3%2582%25B1%25E3%2583%25BC%25E3%2582%25B8%25E3%2581%25AEpath%25E3%2582%2592%25E8%25A1%25A8%25E7%25A4%25BA%250Ago%2520list%2520-m%2520-f%2520%27%257B%257B.Dir%257D%257D%27%2520github.com%252Fgo-chi%252Fchi%252Fv5%250A%252FUsers%252Fopm008296%252Fgo%252Fpkg%252Fmod%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%2540v5.3.2 -->
-
-Golangのimageファイル作成
-<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=680&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=true&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2523%2520%25E3%2582%25AD%25E3%2583%25A3%25E3%2583%2583%25E3%2582%25B7%25E3%2583%25A5%25E3%2581%25A8%25E3%2581%2597%25E3%2581%25A6%25E4%25BF%259D%25E5%25AD%2598%25E3%2581%2595%25E3%2582%258C%25E3%2582%258B%25E3%2583%2587%25E3%2582%25A3%25E3%2583%25AC%25E3%2582%25AF%25E3%2583%2588%25E3%2583%25AA%25E3%2581%25AE%25E3%2583%2591%25E3%2582%25B9%250Ago%2520env%2520GOMODCACHE%250A%252FUsers%252Fopm008296%252Fgo%252Fpkg%252Fmod%250A%250A%2523%2520chi%25E3%2582%2592%25E5%2585%25A5%25E3%2582%258C%25E3%2581%25A6%25E3%2581%2584%25E3%2582%258Bpath%25E3%2582%2592%25E8%25A1%25A8%25E7%25A4%25BA%250Ago%2520list%2520-m%2520-f%2520%27%257B%257B.Dir%257D%257D%27%2520github.com%252Fgo-chi%252Fchi%252Fv5%250A%252FUsers%252Fopm008296%252Fgo%252Fpkg%252Fmod%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%2540v5.3.2 -->
-
 実測済み（2026-09-23 / node v26.2.0 / express 5.2.1）。採取元は `ex-npm/README.md`。
 
+npmのimageファイル作成
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=637&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=false&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2523%2520%25E3%2582%25AB%25E3%2583%25AC%25E3%2583%25B3%25E3%2583%2588%25E3%2583%2587%25E3%2582%25A3%25E3%2583%25AC%25E3%2582%25AF%25E3%2583%2588%25E3%2583%25AA%250A%2524%2520pwd%250A%252FUsers%252Fopm008296%252Fgit%252Fgithub.com-takumashiraki%252Ftakumashiraki%252Fconference-report%252FGoBash%252Fex-npm%250A%250A%2523%2520express%2520%25E3%2581%25AE%25E7%25B5%25B6%25E5%25AF%25BE%2520path%2520%25E3%2582%2592%25E8%25A1%25A8%25E7%25A4%25BA%250A%2524%2520npm%2520ls%2520express%2520--parseable%250A%252FUsers%252Fopm008296%252Fgit%252Fgithub.com-takumashiraki%252Ftakumashiraki%252Fconference-report%252FGoBash%252Fex-npm%252Fnode_modules%252Fexpress -->
+
 ```bash
-go env GOMODCACHE
+# カレントディレクトリ
+$ pwd
+/Users/opm008296/git/github.com-takumashiraki/takumashiraki/conference-report/GoBash/ex-npm
+
+# express の絶対 path を表示
+$ npm ls express --parseable
+/Users/opm008296/git/github.com-takumashiraki/takumashiraki/conference-report/GoBash/ex-npm/node_modules/express
+```
+
+Golangのimageファイル作成
+<!-- https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=vscode&wt=none&l=application%2Fx-sh&width=680&ds=true&dsyoff=0px&dsblur=0px&wc=true&wa=true&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false&code=%2523%2520%25E3%2582%25AD%25E3%2583%25A3%25E3%2583%2583%25E3%2582%25B7%25E3%2583%25A5%25E3%2581%25A8%25E3%2581%2597%25E3%2581%25A6%25E4%25BF%259D%25E5%25AD%2598%25E3%2581%2595%25E3%2582%258C%25E3%2582%258B%25E3%2583%2587%25E3%2582%25A3%25E3%2583%25AC%25E3%2582%25AF%25E3%2583%2588%25E3%2583%25AA%25E3%2581%25AE%25E3%2583%2591%25E3%2582%25B9%250A%2524%2520go%2520env%2520GOMODCACHE%250A%252FUsers%252Fshiraki_takuma%252Fgo%252Fpkg%252Fmod%250A%250A%2523%2520%25E3%2583%2580%25E3%2582%25A6%25E3%2583%25B3%25E3%2583%25AD%25E3%2583%25BC%25E3%2583%2589%25E3%2581%2597%25E3%2581%259F%25E3%2583%2590%25E3%2583%25BC%25E3%2582%25B8%25E3%2583%25A7%25E3%2583%25B3%25E3%2581%25AE%25E3%2583%2591%25E3%2583%2583%25E3%2582%25B1%25E3%2583%25BC%25E3%2582%25B8%25E3%2581%25AE%2520path%2520%25E3%2582%2592%25E8%25A1%25A8%25E7%25A4%25BA%250A%2524%2520go%2520list%2520-m%2520-f%2520%27%257B%257B.Dir%257D%257D%27%2520github.com%252Fgo-chi%252Fchi%252Fv5%250A%252FUsers%252Fopm008296%252Fgo%252Fpkg%252Fmod%252Fgithub.com%252Fgo-chi%252Fchi%252Fv5%2540v5.3.2 -->
+
+```bash
+# キャッシュとして保存されるディレクトリのパス
+$ go env GOMODCACHE
 /Users/shiraki_takuma/go/pkg/mod
 
-cd GoBash/ex-Go
-go list -m -f '{{.Dir}}' github.com/go-chi/chi/v5
+# ダウンロードしたバージョンのパッケージの path を表示
+$ go list -m -f '{{.Dir}}' github.com/go-chi/chi/v5
 /Users/opm008296/go/pkg/mod/github.com/go-chi/chi/v5@v5.3.2
-
-cd GoBash/ex-npm
-npm ls express --parseable
-/Users/opm008296/git/github.com-takumashiraki/takumashiraki/conference-report/GoBash/ex-npm/node_modules/express
 ```
 
 「chi を import できているのに、リポジトリに実体がない。どこにある？」
