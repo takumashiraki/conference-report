@@ -4,6 +4,9 @@
   "private": true,
   "description": "ex-Go と同じことをする Node 実装（Go Bash vol.3 の ls 比較用）",
   "main": "index.js",
+  "engines": {
+    "node": "26.10.0"
+  },
   "scripts": {
     "start": "node index.js"
   },
